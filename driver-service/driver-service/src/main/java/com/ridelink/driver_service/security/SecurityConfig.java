@@ -58,6 +58,10 @@ public class SecurityConfig {
                         // DriverController.setAvailability instead, which still rejects a
                         // PASSENGER-role token.
                         .requestMatchers(HttpMethod.PATCH, "/api/drivers/*/availability").permitAll()
+                        // Swagger UI and its raw OpenAPI document - the brief names
+                        // Swagger UI as an official demo interface, so it can't itself
+                        // require a token to load.
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) ->
