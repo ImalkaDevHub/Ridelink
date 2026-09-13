@@ -2,11 +2,16 @@ package com.ridelink.driver_service.controller;
 
 import com.ridelink.driver_service.model.Driver;
 import com.ridelink.driver_service.service.DriverService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/drivers")
@@ -16,8 +21,8 @@ public class DriverController {
     private DriverService driverService;
 
     @PostMapping
-    public Driver create(@RequestBody Driver driver) {
-        return driverService.createDriver(driver);
+    public ResponseEntity<Driver> create(@Valid @RequestBody Driver driver) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(driverService.createDriver(driver));
     }
 
     @GetMapping("/available")
@@ -33,7 +38,18 @@ public class DriverController {
     // PASSENGER's) with 403.
     @PatchMapping("/{id}/availability")
     @PreAuthorize("isAnonymous() or hasAuthority('DRIVER')")
-    public Driver setAvailability(@PathVariable Long id, @RequestParam boolean available) {
-        return driverService.setAvailability(id, available);
+    public ResponseEntity<?> setAvailability(@PathVariable Long id, @RequestParam boolean available) {
+        try {
+            return ResponseEntity.ok(driverService.setAvailability(id, available));
+        } catch (DriverService.DriverNotFoundException e) {
+            return errorResponse(HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", e.getMessage());
+        }
+    }
+
+    private ResponseEntity<Map<String, String>> errorResponse(HttpStatus status, String code, String message) {
+        Map<String, String> body = new HashMap<>();
+        body.put("code", code);
+        body.put("message", message);
+        return ResponseEntity.status(status).body(body);
     }
 }

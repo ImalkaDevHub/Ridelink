@@ -1,7 +1,11 @@
 package com.ridelink.driver_service.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 
+// Bound directly from the request body on creation (see DriverController) -
+// this service has no separate DTO layer, so the validation constraints
+// that would normally live on a request DTO live here instead.
 @Entity
 public class Driver {
 
@@ -9,11 +13,20 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "name is required")
     private String name;
+
+    @NotBlank(message = "vehicleNumber is required")
     private String vehicleNumber;
+
+    @NotBlank(message = "vehicleType is required")
     private String vehicleType;
+
     private boolean available = true;
+
+    @NotBlank(message = "serviceArea is required")
     private String serviceArea;
+
     private Double currentLat;
     private Double currentLng;
 

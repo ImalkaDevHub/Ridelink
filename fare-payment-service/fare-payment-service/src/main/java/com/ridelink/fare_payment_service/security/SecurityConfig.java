@@ -1,5 +1,6 @@
 package com.ridelink.fare_payment_service.security;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -36,6 +37,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Without this, an uncaught exception (malformed JSON, a 404 for
+                        // an unmapped path, ...) triggers Spring Boot's internal forward
+                        // to /error, which /this/ security chain would otherwise treat as
+                        // just another unauthenticated request and reject with 401 -
+                        // masking the real status code and error body entirely.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // Fare estimates are often shown pre-login in real apps; kept
                         // open here for simplicity. Everything else - including the
                         // interservice /api/payments/finalize call - requires a token.

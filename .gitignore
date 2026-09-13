@@ -1,0 +1,28 @@
+# Applies repo-wide, on top of each service's own .gitignore (which only
+# covers its own subtree) - this catches IDE project folders that sit one
+# level above each service's Maven root (e.g. account-service/.idea/),
+# which the per-service .gitignore files can never reach.
+
+# Build output
+target/
+*.class
+
+# Secrets / local overrides - none of these should ever be committed
+.env
+.env.*
+application-local.properties
+application-*-local.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db

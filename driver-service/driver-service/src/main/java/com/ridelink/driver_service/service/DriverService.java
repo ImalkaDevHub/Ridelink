@@ -23,8 +23,14 @@ public class DriverService {
 
     public Driver setAvailability(Long id, boolean available) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Driver not found with id: " + id));
+                .orElseThrow(() -> new DriverNotFoundException("Driver not found with id: " + id));
         driver.setAvailable(available);
         return driverRepository.save(driver);
+    }
+
+    public static class DriverNotFoundException extends RuntimeException {
+        public DriverNotFoundException(String message) {
+            super(message);
+        }
     }
 }

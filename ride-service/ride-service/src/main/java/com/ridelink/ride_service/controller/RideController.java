@@ -22,7 +22,7 @@ public class RideController {
     private RideService rideService;
 
     @PostMapping
-    public ResponseEntity<?> requestRide(@RequestBody Ride ride) {
+    public ResponseEntity<?> requestRide(@Valid @RequestBody Ride ride) {
         try {
             Ride created = rideService.requestRide(ride);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);

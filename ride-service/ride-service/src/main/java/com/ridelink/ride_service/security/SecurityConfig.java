@@ -1,5 +1,6 @@
 package com.ridelink.ride_service.security;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,14 @@ public class SecurityConfig {
                 // token today, so every /api/rides/** endpoint simply requires
                 // authentication - ride creation included, so there are no
                 // anonymous ride requests.
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        // Without this, an uncaught exception (malformed JSON, a 404 for
+                        // an unmapped path, ...) triggers Spring Boot's internal forward
+                        // to /error, which /this/ security chain would otherwise treat as
+                        // just another unauthenticated request and reject with 401 -
+                        // masking the real status code and error body entirely.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) ->
                                 writeJsonError(response, objectMapper, HttpStatus.UNAUTHORIZED,
