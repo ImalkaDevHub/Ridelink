@@ -4,6 +4,9 @@ import com.ridelink.ride_service.client.DriverClient;
 import com.ridelink.ride_service.dto.CompleteRideRequest;
 import com.ridelink.ride_service.model.Ride;
 import com.ridelink.ride_service.service.RideService;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +24,17 @@ public class RideController {
     @Autowired
     private RideService rideService;
 
+    // Controller methods return ResponseEntity<?> because a single method
+    // can return either the success DTO or an error body - springdoc can't
+    // infer a schema from a wildcard generic type, so each @ApiResponse
+    // below spells out the real status code and schema explicitly.
+
     @PostMapping
+    @ApiResponse(responseCode = "201", description = "Ride created and a driver assigned",
+            content = @Content(schema = @Schema(implementation = Ride.class)))
+    @ApiResponse(responseCode = "400", description = "Validation failed or malformed JSON")
+    @ApiResponse(responseCode = "409", description = "No driver is available right now")
+    @ApiResponse(responseCode = "503", description = "Driver Service is unreachable")
     public ResponseEntity<?> requestRide(@Valid @RequestBody Ride ride) {
         try {
             Ride created = rideService.requestRide(ride);
@@ -35,6 +48,9 @@ public class RideController {
     }
 
     @GetMapping("/{id}")
+    @ApiResponse(responseCode = "200", description = "Ride found",
+            content = @Content(schema = @Schema(implementation = Ride.class)))
+    @ApiResponse(responseCode = "404", description = "No ride with this id")
     public ResponseEntity<?> getRide(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(rideService.getRide(id));
@@ -51,6 +67,12 @@ public class RideController {
     // yet. Documented limitation / follow-up for the report.
     @PatchMapping("/{id}/complete")
     @PreAuthorize("hasAuthority('DRIVER') or hasAuthority('ADMIN')")
+    @ApiResponse(responseCode = "200", description = "Ride completed and payment recorded in Fare & Payment Service",
+            content = @Content(schema = @Schema(implementation = Ride.class)))
+    @ApiResponse(responseCode = "403", description = "Caller is neither a DRIVER nor an ADMIN")
+    @ApiResponse(responseCode = "404", description = "No ride with this id")
+    @ApiResponse(responseCode = "409", description = "Ride is not in a completable state, or was already paid")
+    @ApiResponse(responseCode = "503", description = "Fare & Payment Service call failed - ride is left unchanged")
     public ResponseEntity<?> completeRide(@PathVariable Long id, @Valid @RequestBody CompleteRideRequest request) {
         try {
             Ride completed = rideService.completeRide(id, request.getDistanceKm(), request.getDurationMin());

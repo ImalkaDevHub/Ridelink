@@ -1,9 +1,15 @@
 package com.ridelink.account_service.controller;
 
+import com.ridelink.account_service.dto.AccountResponse;
+import com.ridelink.account_service.dto.AuthResponse;
 import com.ridelink.account_service.dto.LoginRequest;
 import com.ridelink.account_service.dto.ProfileUpdateRequest;
 import com.ridelink.account_service.dto.RegisterRequest;
 import com.ridelink.account_service.service.AccountService;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,7 +26,22 @@ public class AccountController {
     @Autowired
     private AccountService accountService;
 
+    // Controller methods return ResponseEntity<?> because a single method
+    // can return either the success DTO or an error body, depending on
+    // which exception (if any) is caught - springdoc can't infer a schema
+    // from a wildcard generic type, so each @ApiResponse below spells out
+    // the real status code and schema explicitly instead of leaving
+    // Swagger UI to guess "200, generic object" for everything.
+
+    // Public - no token exists yet at registration time. Overrides the
+    // service-wide default security requirement so Swagger UI doesn't show
+    // a misleading lock icon here.
     @PostMapping("/api/auth/register")
+    @SecurityRequirements
+    @ApiResponse(responseCode = "201", description = "Account created",
+            content = @Content(schema = @Schema(implementation = AuthResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Validation failed or role is not PASSENGER/DRIVER")
+    @ApiResponse(responseCode = "409", description = "Email already registered")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(accountService.register(request));
@@ -31,7 +52,13 @@ public class AccountController {
         }
     }
 
+    // Public - this is how a token is obtained in the first place.
     @PostMapping("/api/auth/login")
+    @SecurityRequirements
+    @ApiResponse(responseCode = "200", description = "Login succeeded",
+            content = @Content(schema = @Schema(implementation = AuthResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Invalid email or password")
+    @ApiResponse(responseCode = "403", description = "Account is suspended")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
             return ResponseEntity.ok(accountService.login(request));
@@ -43,6 +70,9 @@ public class AccountController {
     }
 
     @GetMapping("/api/accounts/{id}")
+    @ApiResponse(responseCode = "200", description = "Profile found - never includes the password",
+            content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "404", description = "No account with this id")
     public ResponseEntity<?> getProfile(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(accountService.getProfile(id));
@@ -52,6 +82,10 @@ public class AccountController {
     }
 
     @PatchMapping("/api/accounts/{id}")
+    @ApiResponse(responseCode = "200", description = "Profile updated",
+            content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "404", description = "No account with this id")
+    @ApiResponse(responseCode = "409", description = "Email already used by another account")
     public ResponseEntity<?> updateProfile(@PathVariable Long id, @Valid @RequestBody ProfileUpdateRequest request) {
         try {
             return ResponseEntity.ok(accountService.updateProfile(id, request));
@@ -64,6 +98,11 @@ public class AccountController {
 
     @PatchMapping("/api/accounts/{id}/status")
     @PreAuthorize("hasAuthority('ADMIN')")
+    @ApiResponse(responseCode = "200", description = "Status updated",
+            content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Status must be ACTIVE or SUSPENDED")
+    @ApiResponse(responseCode = "403", description = "Caller does not have the ADMIN authority")
+    @ApiResponse(responseCode = "404", description = "No account with this id")
     public ResponseEntity<?> setStatus(@PathVariable Long id, @RequestParam String status) {
         try {
             return ResponseEntity.ok(accountService.setStatus(id, status));
