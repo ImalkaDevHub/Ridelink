@@ -1,0 +1,63 @@
+:root {
+  --bg: #14161a;
+  --surface: #171a1f;
+  --card: #f2f0eb;
+  --card-text: #14161a;
+  --line: #1f3a5f;
+  --accent: #ffb020;
+  --text: #f2f0eb;
+  --muted: #6b7280;
+  --font-heading: var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
+  --font-body: var(--font-ibm-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--text);
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  font-family: var(--font-heading);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes rl-draw {
+  from {
+    stroke-dashoffset: 1400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
