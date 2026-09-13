@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & test (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Let every service run to completion even if one fails, so a single
+      # red service doesn't hide the results of the other three.
+      fail-fast: false
+      matrix:
+        service:
+          - account-service
+          - driver-service
+          - ride-service
+          - fare-payment-service
+
+    # Each service's actual Maven project lives one directory deeper than
+    # its top-level folder name, e.g. account-service/account-service.
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}/${{ matrix.service }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # clean verify runs the full build lifecycle including the unit test
+      # phase, so account-service's and fare-payment-service's JUnit/Mockito
+      # tests execute here too. A non-zero exit from Maven (compile failure
+      # or any failing test) fails this step - and therefore the job -
+      # without any extra handling needed.
+      - name: Build and test
+        run: mvn -B clean verify
