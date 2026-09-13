@@ -181,6 +181,7 @@ Every error response follows the same shape across all four services:
 
 - No frontend is required for this assignment — Swagger UI and Postman are the official interfaces.
 - No real payments, maps, or third-party services are involved anywhere. Everything is simulated, on purpose.
+- Additionally, a Next.js frontend has been designed and added to this project for a complete, real-world user experience.
 
 <div align="center">
 
