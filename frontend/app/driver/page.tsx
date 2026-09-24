@@ -29,8 +29,6 @@ function DriverDashboard() {
   const [toggling, setToggling] = useState(false);
 
   const [rideId, setRideId] = useState("");
-  const [distanceKm, setDistanceKm] = useState("");
-  const [durationMin, setDurationMin] = useState("");
   const [lookedUpRide, setLookedUpRide] = useState<Ride | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
@@ -88,6 +86,7 @@ function DriverDashboard() {
     setLookedUpRide(null);
     try {
       const ride = await rideApi.get(rideId, session.token);
+      console.log("Fetched Ride:", ride);
       setLookedUpRide(ride);
     } catch (e) {
       setLookupError(e instanceof ApiError ? e.message : "Could not reach Ride Service.");
@@ -99,7 +98,9 @@ function DriverDashboard() {
     setCompleteError(null);
     setCompleting(true);
     try {
-      const ride = await rideApi.complete(rideId, { distanceKm: Number(distanceKm), durationMin: Number(durationMin) }, session.token);
+      const distance = Number(lookedUpRide?.distance || 0);
+      const duration = Number(lookedUpRide?.duration || 0);
+      const ride = await rideApi.complete(rideId, { distanceKm: distance, durationMin: duration }, session.token);
       setCompletedRide(ride);
       setLookedUpRide(ride);
     } catch (e) {
@@ -198,9 +199,10 @@ function DriverDashboard() {
                 <StatusBadge status={lookedUpRide.status} />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <Field label="Distance (km)" type="number" step="0.1" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} />
-                <Field label="Duration (min)" type="number" step="1" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
+                <Field label="Distance (km)" type="number" step="0.1" value={lookedUpRide.distance ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, distance: e.target.value })} />
+                <Field label="Duration (min)" type="number" step="1" value={lookedUpRide.duration ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, duration: e.target.value })} />
+                <Field label="Fare (LKR)" type="number" value={lookedUpRide.fare ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, fare: e.target.value })} />
               </div>
 
               <PrimaryButton onClick={completeRide} disabled={completing || lookedUpRide.status === "COMPLETED"}>
