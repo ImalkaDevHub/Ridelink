@@ -101,7 +101,7 @@ export default function AuthPage() {
     <div style={{ minHeight: "100vh" }}>
       <NavBar label="Account Service &middot; 8081" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", minHeight: "calc(100vh - 46px)" }}>
-        <div style={{ padding: "56px 40px", display: "flex", flexDirection: "column", justifyContent: "center", borderRight: "1px solid var(--line)" }}>
+        <div style={{ padding: "56px 40px", display: "flex", flexDirection: "column", justifyContent: "flex-start", borderRight: "1px solid var(--line)", backgroundImage: 'url("/image/bike.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 14 }}>
             Account Service &middot; 8081
           </div>
