@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import { Michroma, Poppins } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
-
-const michroma = Michroma({
-  subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-michroma",
-});
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -22,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${michroma.variable} ${poppins.variable}`}>
+    <html lang="en" className={poppins.variable}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
