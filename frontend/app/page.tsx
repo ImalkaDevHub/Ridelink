@@ -3,113 +3,90 @@ import NavBar from "@/components/NavBar";
 
 export default function LandingPage() {
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <NavBar label="/" />
+    <div>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundImage: 'url("/image/im1.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
+        <NavBar label="/" />
 
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 28,
-          padding: "22px 40px",
-          borderBottom: "1px solid var(--line)",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 14, height: 14, background: "var(--accent)", borderRadius: 3 }} />
-          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: 20 }}>RideLink</span>
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/login" style={{ fontFamily: "var(--font-heading)", fontSize: 13.5, fontWeight: 500, color: "var(--text)" }}>
-            Sign in
-          </Link>
-          <Link
-            href="/login"
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontSize: 13.5,
-              fontWeight: 600,
-              background: "var(--accent)",
-              color: "#14161a",
-              borderRadius: 7,
-              padding: "11px 18px",
-            }}
-          >
-            Request a ride
-          </Link>
-        </div>
-      </header>
-
-      <section
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          borderBottom: "1px solid var(--line)",
-          padding: "72px 40px 88px",
-        }}
-      >
-        <svg
-          viewBox="0 0 1200 400"
-          preserveAspectRatio="xMidYMid slice"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.9 }}
-          aria-hidden="true"
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 28,
+            padding: "22px 40px",
+            flexWrap: "wrap",
+          }}
         >
-          <defs>
-            <pattern id="rl-grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M60 0H0v60" fill="none" stroke="#1f3a5f" strokeWidth="1" opacity=".5" />
-            </pattern>
-          </defs>
-          <rect width="1200" height="400" fill="url(#rl-grid)" />
-          <path
-            d="M60 320C220 320 250 180 380 180s210 10 290 -80 190 -30 260 -30"
-            fill="none"
-            stroke="#ffb020"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeDasharray="1400"
-            style={{ animation: "rl-draw 1.8s cubic-bezier(.65,.05,.36,1) forwards" }}
-          />
-          <circle cx="60" cy="320" r="6" fill="#ffb020" />
-          <rect x="972" y="182" width="16" height="16" fill="#f2f0eb" />
-        </svg>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <Link href="/login" style={{ fontFamily: "var(--font-heading)", fontSize: 13.5, fontWeight: 500, color: "var(--text)" }}>
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: 13.5,
+                fontWeight: 600,
+                background: "var(--accent)",
+                color: "#14161a",
+                borderRadius: 7,
+                padding: "11px 18px",
+              }}
+            >
+              Request a ride
+            </Link>
+          </div>
+        </header>
 
-        <div style={{ position: "relative", maxWidth: 620 }}>
-          <h1
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontWeight: 700,
-              fontSize: "clamp(30px,4.4vw,52px)",
-              lineHeight: 1.02,
-              letterSpacing: -1.4,
-              margin: "0 0 14px",
-            }}
-          >
-            A dispatch board
-            <br />
-            for your city.
-          </h1>
-          <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "var(--muted)", margin: "0 0 28px", maxWidth: "44ch" }}>
-            RideLink matches passengers with drivers who are online right now. You see the fare
-            estimate before you confirm, and the ride&apos;s status while it happens.
-          </p>
-          <Link
-            href="/login"
-            style={{
-              display: "inline-block",
-              fontFamily: "var(--font-heading)",
-              fontSize: 14,
-              fontWeight: 600,
-              background: "var(--accent)",
-              color: "#14161a",
-              borderRadius: 8,
-              padding: "13px 22px",
-            }}
-          >
-            Get started
-          </Link>
-        </div>
-      </section>
+        <section
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            borderBottom: "1px solid var(--line)",
+            padding: "72px 40px 88px",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+
+          <div style={{ position: "relative", maxWidth: 620 }}>
+            <h1
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontWeight: 700,
+                fontSize: "clamp(30px,4.4vw,52px)",
+                lineHeight: 1.02,
+                letterSpacing: -1.4,
+                margin: "0 0 14px",
+              }}
+            >
+              A dispatch board
+              <br />
+              for your city.
+            </h1>
+            <p style={{ fontSize: 15.5, lineHeight: 1.6, color: "var(--muted)", margin: "0 0 28px", maxWidth: "44ch" }}>
+              RideLink matches passengers with drivers who are online right now. You see the fare
+              estimate before you confirm, and the ride&apos;s status while it happens.
+            </p>
+            <Link
+              href="/login"
+              style={{
+                display: "inline-block",
+                fontFamily: "var(--font-heading)",
+                fontSize: 14,
+                fontWeight: 600,
+                background: "var(--accent)",
+                color: "#14161a",
+                borderRadius: 8,
+                padding: "13px 22px",
+              }}
+            >
+              Get started
+            </Link>
+          </div>
+        </section>
+      </div>
 
       <section style={{ padding: "64px 40px", borderBottom: "1px solid var(--line)" }}>
         <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 24, fontWeight: 600, letterSpacing: -0.5, margin: "0 0 32px" }}>
@@ -192,7 +169,7 @@ export default function LandingPage() {
             ].map(([name, port]) => (
               <div
                 key={name}
-                style={{ display: "flex", justifyContent: "space-between", paddingBottom: 10, borderBottom: "1px solid rgba(31,58,95,.6)" }}
+                style={{ display: "flex", justifyContent: "space-between", paddingBottom: 10, borderBottom: "1px solid var(--line)" }}
               >
                 <span>{name}</span>
                 <span style={{ color: "var(--muted)", fontFamily: "var(--font-heading)" }}>:{port}</span>

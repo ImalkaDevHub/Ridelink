@@ -1,12 +1,12 @@
 :root {
-  --bg: #14161a;
-  --surface: #171a1f;
-  --card: #f2f0eb;
-  --card-text: #14161a;
-  --line: #1f3a5f;
-  --accent: #ffb020;
-  --text: #f2f0eb;
-  --muted: #6b7280;
+  --bg: #FFFFFF;
+  --surface: #FAFAF7;
+  --card: #FAFAF7;
+  --card-text: #111111;
+  --line: #E8E8E8;
+  --accent: #FFC400;
+  --text: #111111;
+  --muted: #666666;
   --font-heading: var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
   --font-body: var(--font-ibm-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
 }
