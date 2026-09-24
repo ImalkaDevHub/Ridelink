@@ -112,11 +112,75 @@ function DriverDashboard() {
 
   if (!ready || !session) return null;
 
+  // Mock daily ride history since the backend does not currently provide an endpoint for this.
+  const mockDailyRides = [
+    { id: 101, status: "COMPLETED", fare: 450, distance: 3.2 },
+    { id: 102, status: "COMPLETED", fare: 820, distance: 7.1 },
+    { id: 103, status: "CANCELLED", fare: 0, distance: 2.0 },
+    { id: 104, status: "COMPLETED", fare: 300, distance: 1.5 },
+  ];
+
+  // Logic to calculate stats
+  const completedRides = mockDailyRides.filter((ride) => ride.status === "COMPLETED");
+  const totalEarnings = completedRides.reduce((sum, ride) => sum + (ride.fare || 0), 0);
+  const dailyGoal = 10;
+  const completedCount = completedRides.length;
+  const progressPercentage = Math.min((completedCount / dailyGoal) * 100, 100);
+
   return (
     <div style={{ minHeight: "100vh" }}>
       <NavBar label="Driver Service &middot; 8082" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 24, padding: "28px 32px" }}>
+      {/* Driver Stats & Daily Earnings Section */}
+      <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ 
+          background: "linear-gradient(135deg, #FFC400 0%, #F5B800 100%)", 
+          borderRadius: 16, 
+          padding: "28px 32px", 
+          boxShadow: "0 10px 25px rgba(255, 196, 0, 0.2)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 32,
+          alignItems: "center",
+          justifyContent: "space-between",
+          color: "#111111"
+        }}>
+          <div>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, opacity: 0.8, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Daily Earnings</div>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 44, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>LKR {totalEarnings.toFixed(2)}</div>
+            <div style={{ fontSize: 14.5, opacity: 0.85, marginTop: 10, fontWeight: 500 }}>from {completedCount} completed rides</div>
+          </div>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: 24, background: "rgba(255, 255, 255, 0.15)", padding: "16px 24px", borderRadius: 12 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>Daily Goal</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>{completedCount} / {dailyGoal} Rides</div>
+            </div>
+            
+            {/* SVG Circular Progress Chart */}
+            <div style={{ position: "relative", width: 72, height: 72 }}>
+              <svg width="72" height="72" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(17, 17, 17, 0.15)" strokeWidth="10" />
+                <circle 
+                  cx="50" cy="50" r="40" 
+                  fill="none" 
+                  stroke="#111111" 
+                  strokeWidth="10" 
+                  strokeDasharray={`${2 * Math.PI * 40}`} 
+                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - progressPercentage / 100)}`} 
+                  strokeLinecap="round" 
+                  style={{ transition: "stroke-dashoffset 1s ease-in-out" }}
+                />
+              </svg>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>
+                {Math.round(progressPercentage)}%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 24, padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
         <Card>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
 
