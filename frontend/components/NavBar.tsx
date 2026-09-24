@@ -24,7 +24,7 @@ export default function NavBar({ label }: { label?: string }) {
         alignItems: "center",
         gap: 14,
         padding: "10px 20px",
-        background: "rgba(20,22,26,.92)",
+        background: "rgba(255, 255, 255, 0.92)",
         backdropFilter: "blur(8px)",
         borderBottom: "1px solid var(--line)",
       }}
