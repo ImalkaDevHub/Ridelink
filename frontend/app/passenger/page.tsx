@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import { Field, PrimaryButton, Card, ErrorBanner, InfoBanner, StatusBadge } from "@/components/ui";
 import { fareApi, rideApi, ApiError, type FareEstimateResponse, type Ride } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDisplayId } from "@/lib/format";
 
 export default function PassengerPage() {
   const { session, ready } = useAuth();
@@ -162,7 +163,7 @@ export default function PassengerPage() {
               {currentRide && <StatusBadge status={currentRide.status} />}
               {currentRide?.id && (
                 <Link href={`/rides/${currentRide.id}`} style={{ marginLeft: "auto", fontSize: 12.5 }}>
-                  Ride #{currentRide.id}
+                  Ride {formatDisplayId(currentRide.id)}
                 </Link>
               )}
             </div>
@@ -177,7 +178,7 @@ export default function PassengerPage() {
               <div>
                 <Row label="Pickup" value={currentRide.pickup} />
                 <Row label="Destination" value={currentRide.destination} />
-                <Row label="Driver id" value={currentRide.driverId ? String(currentRide.driverId) : "unassigned"} />
+                <Row label="Driver id" value={currentRide.driverId ? formatDisplayId(currentRide.driverId) : "unassigned"} />
                 {currentRide.status === "COMPLETED" && (
                   <Link
                     href={`/rides/${currentRide.id}`}
@@ -207,7 +208,7 @@ export default function PassengerPage() {
               <div style={{ display: "grid", gap: 8 }}>
                 {recentRides.map((ride) => (
                   <Link key={ride.id} href={`/rides/${ride.id}`} style={{ fontSize: 13.5 }}>
-                    Ride #{ride.id} ({ride.status})
+                    Ride {formatDisplayId(ride.id)} ({ride.status})
                   </Link>
                 ))}
               </div>

@@ -7,6 +7,7 @@ import NavBar from "@/components/NavBar";
 import { Card, ErrorBanner, StatusBadge } from "@/components/ui";
 import { rideApi, fareApi, ApiError, type Ride, type ReceiptResponse } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDisplayId } from "@/lib/format";
 
 export default function RideDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = usePromise(params);
@@ -64,7 +65,7 @@ export default function RideDetailPage({ params }: { params: Promise<{ id: strin
         <Link href={session.role === "DRIVER" ? "/driver" : "/passenger"} style={{ fontSize: 12.5, color: "var(--muted)" }}>
           &larr; Back
         </Link>
-        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontWeight: 600, margin: 0 }}>Ride #{id}</h2>
+        <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 19, fontWeight: 600, margin: 0 }}>Ride {formatDisplayId(id)}</h2>
         {ride && <StatusBadge status={ride.status} />}
       </div>
 
@@ -78,7 +79,7 @@ export default function RideDetailPage({ params }: { params: Promise<{ id: strin
             <Row label="Passenger" value={ride.passengerName} />
             <Row label="Pickup" value={ride.pickup} />
             <Row label="Destination" value={ride.destination} />
-            <Row label="Driver id" value={ride.driverId ? String(ride.driverId) : "unassigned"} />
+            <Row label="Driver id" value={ride.driverId ? formatDisplayId(ride.driverId) : "unassigned"} />
           </Card>
         )}
 

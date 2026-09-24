@@ -61,13 +61,13 @@ export type Role = "PASSENGER" | "DRIVER" | "ADMIN";
 
 export interface AuthResponse {
   token: string;
-  id: number;
+  id: string;
   name: string;
   role: Role;
 }
 
 export interface Driver {
-  id: number;
+  id: string;
   name: string;
   vehicleNumber: string;
   vehicleType: string;
@@ -76,12 +76,12 @@ export interface Driver {
 }
 
 export interface Ride {
-  id: number;
+  id: string;
   passengerName: string;
   passengerId: string | null;
   pickup: string;
   destination: string;
-  driverId: number | null;
+  driverId: string | null;
   status: string;
   distance?: number | string;
   duration?: number | string;
@@ -100,7 +100,7 @@ export interface FareEstimateResponse {
 }
 
 export interface PaymentResponse {
-  id: number;
+  id: string;
   rideId: string;
   finalFare: number;
   status: string;
@@ -145,7 +145,7 @@ export const driverApi = {
 
   // Callable anonymously or with a DRIVER token - see driver-service's
   // SecurityConfig. We always pass the token when we have one.
-  setAvailability: (driverId: number, available: boolean, token?: string | null) =>
+  setAvailability: (driverId: string, available: boolean, token?: string | null) =>
     request<Driver>(
       `${DRIVER_API}/api/drivers/${driverId}/availability?available=${available}`,
       { method: "PATCH" },
