@@ -51,7 +51,7 @@ public class RideController {
     @ApiResponse(responseCode = "200", description = "Ride found",
             content = @Content(schema = @Schema(implementation = Ride.class)))
     @ApiResponse(responseCode = "404", description = "No ride with this id")
-    public ResponseEntity<?> getRide(@PathVariable Long id) {
+    public ResponseEntity<?> getRide(@PathVariable String id) {
         try {
             return ResponseEntity.ok(rideService.getRide(id));
         } catch (RuntimeException e) {
@@ -97,7 +97,7 @@ public class RideController {
     @ApiResponse(responseCode = "404", description = "No ride with this id")
     @ApiResponse(responseCode = "409", description = "Ride is not in a completable state, or was already paid")
     @ApiResponse(responseCode = "503", description = "Fare & Payment Service call failed - ride is left unchanged")
-    public ResponseEntity<?> completeRide(@PathVariable Long id, @Valid @RequestBody CompleteRideRequest request) {
+    public ResponseEntity<?> completeRide(@PathVariable String id, @Valid @RequestBody CompleteRideRequest request) {
         try {
             Ride completed = rideService.completeRide(id, request.getDistanceKm(), request.getDurationMin());
             return ResponseEntity.ok(completed);
