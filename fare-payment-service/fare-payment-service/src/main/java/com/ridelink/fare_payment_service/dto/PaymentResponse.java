@@ -4,7 +4,7 @@ import java.time.Instant;
 
 public class PaymentResponse {
 
-    private Long id;
+    private String id;
     private String rideId;
     private double finalFare;
     private String status;
@@ -12,7 +12,7 @@ public class PaymentResponse {
     private Instant createdAt;
     private Instant completedAt;
 
-    public PaymentResponse(Long id, String rideId, double finalFare, String status, String paymentMethod,
+    public PaymentResponse(String id, String rideId, double finalFare, String status, String paymentMethod,
                             Instant createdAt, Instant completedAt) {
         this.id = id;
         this.rideId = rideId;
@@ -23,11 +23,11 @@ public class PaymentResponse {
         this.completedAt = completedAt;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

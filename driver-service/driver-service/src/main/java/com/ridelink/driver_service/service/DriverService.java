@@ -21,12 +21,12 @@ public class DriverService {
         return driverRepository.findByAvailableTrue();
     }
 
-    public Driver getDriverByAccountId(Long accountId) {
+    public Driver getDriverByAccountId(String accountId) {
         return driverRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new DriverNotFoundException("No driver profile found for account id: " + accountId));
     }
 
-    public Driver setAvailability(Long id, boolean available) {
+    public Driver setAvailability(String id, boolean available) {
         Driver driver = driverRepository.findById(id)
                 .orElseThrow(() -> new DriverNotFoundException("Driver not found with id: " + id));
         driver.setAvailable(available);

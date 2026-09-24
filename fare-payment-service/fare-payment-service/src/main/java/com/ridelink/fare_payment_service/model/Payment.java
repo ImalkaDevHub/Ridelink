@@ -1,19 +1,19 @@
 package com.ridelink.fare_payment_service.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "payments")
+@Document(collection = "payments")
 public class Payment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     // One payment per ride.
-    @Column(unique = true, nullable = false)
+    @Indexed(unique = true)
     private String rideId;
 
     private String passengerId;
@@ -22,7 +22,6 @@ public class Payment {
     private double distanceKm;
     private double durationMin;
 
-    @Enumerated(EnumType.STRING)
     private PaymentStatus status = PaymentStatus.PENDING;
 
     private String paymentMethod = "SIMULATED_CARD";
@@ -30,11 +29,11 @@ public class Payment {
     private Instant createdAt = Instant.now();
     private Instant completedAt;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

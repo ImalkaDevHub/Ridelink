@@ -29,7 +29,7 @@ public class Ride {
     @NotBlank(message = "destination is required")
     private String destination;
 
-    private Long driverId;
+    private String driverId;
     private String status; // REQUESTED, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
 
     private Double distance;
@@ -76,11 +76,11 @@ public class Ride {
         this.destination = destination;
     }
 
-    public Long getDriverId() {
+    public String getDriverId() {
         return driverId;
     }
 
-    public void setDriverId(Long driverId) {
+    public void setDriverId(String driverId) {
         this.driverId = driverId;
     }
 

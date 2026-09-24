@@ -57,8 +57,8 @@ public class JwtUtil {
         return parseClaims(token) != null;
     }
 
-    public Long getAccountId(Claims claims) {
-        return claims.get("accountId", Long.class);
+    public String getAccountId(Claims claims) {
+        return claims.get("accountId", String.class);
     }
 
     public String getRole(Claims claims) {

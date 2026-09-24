@@ -28,7 +28,7 @@ public class DriverController {
     @PostMapping
     public ResponseEntity<Driver> create(@Valid @RequestBody Driver driver) {
         String accountIdStr = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-        driver.setAccountId(Long.valueOf(accountIdStr));
+        driver.setAccountId(accountIdStr);
         return ResponseEntity.status(HttpStatus.CREATED).body(driverService.createDriver(driver));
     }
 
@@ -45,7 +45,7 @@ public class DriverController {
     public ResponseEntity<?> getMyProfile() {
         try {
             String accountIdStr = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
-            return ResponseEntity.ok(driverService.getDriverByAccountId(Long.valueOf(accountIdStr)));
+            return ResponseEntity.ok(driverService.getDriverByAccountId(accountIdStr));
         } catch (DriverService.DriverNotFoundException e) {
             return errorResponse(HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", e.getMessage());
         }
@@ -70,7 +70,7 @@ public class DriverController {
             content = @Content(schema = @Schema(implementation = Driver.class)))
     @ApiResponse(responseCode = "403", description = "A non-DRIVER token was supplied")
     @ApiResponse(responseCode = "404", description = "No driver with this id")
-    public ResponseEntity<?> setAvailability(@PathVariable Long id, @RequestParam boolean available) {
+    public ResponseEntity<?> setAvailability(@PathVariable String id, @RequestParam boolean available) {
         try {
             return ResponseEntity.ok(driverService.setAvailability(id, available));
         } catch (DriverService.DriverNotFoundException e) {

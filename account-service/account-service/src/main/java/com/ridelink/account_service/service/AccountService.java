@@ -61,11 +61,11 @@ public class AccountService {
         return new AuthResponse(token, account.getId(), account.getName(), account.getRole().name());
     }
 
-    public AccountResponse getProfile(Long id) {
+    public AccountResponse getProfile(String id) {
         return toResponse(findOrThrow(id));
     }
 
-    public AccountResponse updateProfile(Long id, ProfileUpdateRequest request) {
+    public AccountResponse updateProfile(String id, ProfileUpdateRequest request) {
         Account account = findOrThrow(id);
 
         accountRepository.findByEmail(request.getEmail())
@@ -80,7 +80,7 @@ public class AccountService {
         return toResponse(accountRepository.save(account));
     }
 
-    public AccountResponse setStatus(Long id, String status) {
+    public AccountResponse setStatus(String id, String status) {
         Account account = findOrThrow(id);
 
         Status newStatus;
@@ -94,7 +94,7 @@ public class AccountService {
         return toResponse(accountRepository.save(account));
     }
 
-    private Account findOrThrow(Long id) {
+    private Account findOrThrow(String id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException("Account not found with id: " + id));
     }

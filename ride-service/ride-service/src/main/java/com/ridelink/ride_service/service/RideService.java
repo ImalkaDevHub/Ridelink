@@ -55,7 +55,7 @@ public class RideService {
         return rideRepository.findByPassengerIdOrderByIdDesc(passengerId);
     }
 
-    public java.util.List<Ride> getRidesByDriver(Long driverId) {
+    public java.util.List<Ride> getRidesByDriver(String driverId) {
         return rideRepository.findByDriverIdOrderByIdDesc(driverId);
     }
 
