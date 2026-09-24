@@ -7,7 +7,6 @@ import NavBar from "@/components/NavBar";
 import { Field, PrimaryButton, Card, ErrorBanner, InfoBanner, StatusBadge } from "@/components/ui";
 import { fareApi, rideApi, ApiError, type FareEstimateResponse, type Ride } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { addRecentRideId, getRecentRideIds } from "@/lib/recentRides";
 
 export default function PassengerPage() {
   const { session, ready } = useAuth();
@@ -25,55 +24,38 @@ export default function PassengerPage() {
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
-  const [currentRideId, setCurrentRideId] = useState<number | null>(null);
-  const [currentRide, setCurrentRide] = useState<Ride | null>(null);
-  const [recentIds, setRecentIds] = useState<number[]>([]);
+  const [allRides, setAllRides] = useState<Ride[]>([]);
+
+  const currentRide = allRides.find(r => r.status !== "COMPLETED" && r.status !== "CANCELLED") || null;
+  const recentRides = allRides.filter(r => r.status === "COMPLETED" || r.status === "CANCELLED").slice(0, 10);
 
   useEffect(() => {
     if (ready && (!session || session.role !== "PASSENGER")) router.push("/login");
   }, [ready, session, router]);
 
-  useEffect(() => {
-    // Deferred to an effect (not a lazy useState initializer): the server
-    // has no localStorage, so the first client render must also start
-    // empty to match the server-rendered HTML, or React flags a hydration
-    // mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRecentIds(getRecentRideIds());
-    try {
-      const stored = window.localStorage.getItem("ridelink.currentRideId");
-      if (stored) setCurrentRideId(Number(stored));
-    } catch {
-      // ignore
-    }
-  }, []);
-
   const refreshRide = useCallback(async () => {
-    if (!currentRideId || !session) return;
+    if (!session?.id) return;
     try {
-      const ride = await rideApi.get(currentRideId, session.token);
-      setCurrentRide(ride);
+      const rides = await rideApi.listByPassenger(session.id, session.token);
+      setAllRides(rides);
     } catch (err: any) {
-      if (err instanceof ApiError && err.status === 404) {
-        setCurrentRideId(null);
-        window.localStorage.removeItem("ridelink.currentRideId");
-      }
-      // A stale/invalid id shouldn't crash the page, but we stop polling if 404.
+      // Error handling
     }
-  }, [currentRideId, session]);
+  }, [session]);
 
   useEffect(() => {
-    // Polling an external system (Ride Service) on an interval - a
-    // deliberate, ongoing subscription, not state derivable during render.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!session?.id) {
+      setAllRides([]);
+      return;
+    }
+    
     refreshRide();
-    if (!currentRideId) return;
     const interval = setInterval(() => {
-      if (currentRide?.status !== "COMPLETED") refreshRide();
+      // We can check if there's an active ride to decide if we want to keep polling
+      refreshRide();
     }, 5000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRideId]);
+  }, [session?.id, refreshRide]);
 
   async function getEstimate() {
     setEstimateError(null);
@@ -102,16 +84,8 @@ export default function PassengerPage() {
       const distance = Number(distanceKm || 0);
       const duration = Number(durationMin || 0);
       const fare = estimate?.estimatedFare;
-      const ride = await rideApi.request({ passengerName: session.name, pickup, destination, distance, duration, fare }, session.token);
-      setCurrentRide(ride);
-      setCurrentRideId(ride.id);
-      addRecentRideId(ride.id);
-      setRecentIds(getRecentRideIds());
-      try {
-        window.localStorage.setItem("ridelink.currentRideId", String(ride.id));
-      } catch {
-        // ignore
-      }
+      await rideApi.request({ passengerName: session.name, pickup, destination, distance, duration, fare }, session.token);
+      refreshRide();
     } catch (e) {
       setRequestError(e instanceof ApiError ? e.message : "Could not reach Ride Service.");
     } finally {
@@ -186,9 +160,9 @@ export default function PassengerPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
               <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600 }}>Current ride</div>
               {currentRide && <StatusBadge status={currentRide.status} />}
-              {currentRideId && (
-                <Link href={`/rides/${currentRideId}`} style={{ marginLeft: "auto", fontSize: 12.5 }}>
-                  Ride #{currentRideId}
+              {currentRide?.id && (
+                <Link href={`/rides/${currentRide.id}`} style={{ marginLeft: "auto", fontSize: 12.5 }}>
+                  Ride #{currentRide.id}
                 </Link>
               )}
             </div>
@@ -224,17 +198,16 @@ export default function PassengerPage() {
           </Card>
 
           <Card>
-            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Recent on this device</div>
-            {recentIds.length === 0 ? (
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Your Ride History</div>
+            {recentRides.length === 0 ? (
               <InfoBanner>
-                Ride Service has no &quot;list my rides&quot; endpoint yet, only lookup by id - so
-                this is just what this browser has requested, not a real history.
+                No completed or cancelled rides found in your history yet.
               </InfoBanner>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                {recentIds.map((id) => (
-                  <Link key={id} href={`/rides/${id}`} style={{ fontSize: 13.5 }}>
-                    Ride #{id}
+                {recentRides.map((ride) => (
+                  <Link key={ride.id} href={`/rides/${ride.id}`} style={{ fontSize: 13.5 }}>
+                    Ride #{ride.id} ({ride.status})
                   </Link>
                 ))}
               </div>

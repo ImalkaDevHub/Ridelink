@@ -51,6 +51,14 @@ public class RideService {
                 .orElseThrow(() -> new RuntimeException("Ride not found with id: " + id));
     }
 
+    public java.util.List<Ride> getRidesByPassenger(String passengerId) {
+        return rideRepository.findByPassengerIdOrderByIdDesc(passengerId);
+    }
+
+    public java.util.List<Ride> getRidesByDriver(Long driverId) {
+        return rideRepository.findByDriverIdOrderByIdDesc(driverId);
+    }
+
     // Required interservice interaction between Ride Management and Fare &
     // Payment, per the architecture design: completing a ride must record a
     // real payment, so this makes a synchronous REST call to
@@ -71,14 +79,22 @@ public class RideService {
         String authorizationHeader = request.getHeader("Authorization");
 
         try {
-            fareClient.finalizePayment(
-                    ride.getId().toString(), ride.getPassengerId(), distanceKm, durationMin, authorizationHeader);
+            // 1. Before attempting to create a new payment, check if a payment already exists.
+            com.ridelink.ride_service.dto.PaymentResponse existingPayment = fareClient.getPaymentStatus(
+                    ride.getId().toString(), authorizationHeader);
+            
+            if (existingPayment == null) {
+                // 2. No payment exists yet, finalize the payment.
+                fareClient.finalizePayment(
+                        ride.getId().toString(), ride.getPassengerId(), distanceKm, durationMin, authorizationHeader);
+            }
         } catch (FareClient.DuplicatePaymentException e) {
-            throw new PaymentAlreadyExistsException(e.getMessage());
+            // If it somehow still conflicts concurrently, gracefully handle it instead of throwing 409
         } catch (FareClient.PaymentServiceUnavailableException e) {
             throw new PaymentFailedException(e.getMessage());
         }
 
+        // 3. Gracefully update the ride status to 'COMPLETED' so the frontend can proceed smoothly.
         ride.setStatus("COMPLETED");
         return rideRepository.save(ride);
     }

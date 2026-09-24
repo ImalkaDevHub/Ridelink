@@ -59,6 +59,20 @@ public class RideController {
         }
     }
 
+    @GetMapping
+    @ApiResponse(responseCode = "200", description = "List of rides for passenger or driver")
+    public ResponseEntity<?> getRides(
+            @RequestParam(required = false) String passengerId,
+            @RequestParam(required = false) Long driverId) {
+        if (passengerId != null) {
+            return ResponseEntity.ok(rideService.getRidesByPassenger(passengerId));
+        }
+        if (driverId != null) {
+            return ResponseEntity.ok(rideService.getRidesByDriver(driverId));
+        }
+        return ResponseEntity.ok(java.util.Collections.emptyList());
+    }
+
     // Only a driver (or an admin) may complete a ride. This is a role-level
     // check, not a per-resource ownership check - the JWT carries no
     // driverId claim, and there is no linkage today between an
