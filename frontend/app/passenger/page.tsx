@@ -99,7 +99,10 @@ export default function PassengerPage() {
     setRequestError(null);
     setRequesting(true);
     try {
-      const ride = await rideApi.request({ passengerName: session.name, pickup, destination }, session.token);
+      const distance = Number(distanceKm || 0);
+      const duration = Number(durationMin || 0);
+      const fare = estimate?.estimatedFare;
+      const ride = await rideApi.request({ passengerName: session.name, pickup, destination, distance, duration, fare }, session.token);
       setCurrentRide(ride);
       setCurrentRideId(ride.id);
       addRecentRideId(ride.id);

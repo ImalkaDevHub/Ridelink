@@ -32,6 +32,10 @@ public class Ride {
     private Long driverId;
     private String status; // REQUESTED, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
 
+    private Double distance;
+    private Integer duration;
+    private Double fare;
+
     public Long getId() {
         return id;
     }
@@ -86,5 +90,29 @@ public class Ride {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Double getDistance() {
+        return distance;
+    }
+
+    public void setDistance(Double distance) {
+        this.distance = distance;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Integer duration) {
+        this.duration = duration;
+    }
+
+    public Double getFare() {
+        return fare;
+    }
+
+    public void setFare(Double fare) {
+        this.fare = fare;
     }
 }

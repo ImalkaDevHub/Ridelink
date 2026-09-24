@@ -83,6 +83,9 @@ export interface Ride {
   destination: string;
   driverId: number | null;
   status: string;
+  distance?: number | string;
+  duration?: number | string;
+  fare?: number | string;
 }
 
 export interface FareEstimateResponse {
@@ -151,7 +154,7 @@ export const driverApi = {
 // ---- ride-service (8083) -------------------------------------------------
 
 export const rideApi = {
-  request: (body: { passengerName: string; pickup: string; destination: string }, token: string) =>
+  request: (body: { passengerName: string; pickup: string; destination: string; distance?: number; duration?: number; fare?: number }, token: string) =>
     request<Ride>(`${RIDE_API}/api/rides`, { method: "POST", body: JSON.stringify(body) }, token),
 
   get: (id: number | string, token: string) => request<Ride>(`${RIDE_API}/api/rides/${id}`, {}, token),
