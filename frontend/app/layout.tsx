@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Sans } from "next/font/google";
+import { Michroma, Poppins } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
+const michroma = Michroma({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-space-grotesk",
+  weight: ["400"],
+  variable: "--font-michroma",
 });
 
-const ibmPlexSans = IBM_Plex_Sans({
+const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-ibm-plex-sans",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${ibmPlexSans.variable}`}>
+    <html lang="en" className={`${michroma.variable} ${poppins.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>
