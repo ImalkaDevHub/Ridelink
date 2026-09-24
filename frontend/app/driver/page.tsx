@@ -34,10 +34,22 @@ function DriverDashboard() {
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [completedRide, setCompletedRide] = useState<Ride | null>(null);
+  
+  const [driverRides, setDriverRides] = useState<Ride[]>([]);
 
   useEffect(() => {
     if (ready && (!session || session.role !== "DRIVER")) router.push("/login");
   }, [ready, session, router]);
+
+  useEffect(() => {
+    if (!session?.driverProfileId || !session?.token) {
+      setDriverRides([]);
+      return;
+    }
+    rideApi.listByDriver(session.driverProfileId, session.token)
+      .then(setDriverRides)
+      .catch(() => setDriverRides([]));
+  }, [session?.driverProfileId, session?.token, completedRide]);
 
   useEffect(() => {
     // Syncing local form state (and the persisted session) to the
@@ -112,16 +124,8 @@ function DriverDashboard() {
 
   if (!ready || !session) return null;
 
-  // Mock daily ride history since the backend does not currently provide an endpoint for this.
-  const mockDailyRides = [
-    { id: 101, status: "COMPLETED", fare: 450, distance: 3.2 },
-    { id: 102, status: "COMPLETED", fare: 820, distance: 7.1 },
-    { id: 103, status: "CANCELLED", fare: 0, distance: 2.0 },
-    { id: 104, status: "COMPLETED", fare: 300, distance: 1.5 },
-  ];
-
-  // Logic to calculate stats
-  const completedRides = mockDailyRides.filter((ride) => ride.status === "COMPLETED");
+  // Logic to calculate stats from real backend data
+  const completedRides = driverRides.filter((ride) => ride.status === "COMPLETED");
   const totalEarnings = completedRides.reduce((sum, ride) => sum + (ride.fare || 0), 0);
   const dailyGoal = 10;
   const completedCount = completedRides.length;

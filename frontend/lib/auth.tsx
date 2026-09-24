@@ -62,7 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ready,
     login: (s) => persist(s),
     updateSession: (patch) => persist(session ? { ...session, ...patch } : session),
-    logout: () => persist(null),
+    logout: () => {
+      persist(null);
+      try {
+        window.localStorage.removeItem("ridelink.recentRideIds");
+        window.localStorage.removeItem("ridelink.currentRideId");
+      } catch {
+        // ignore
+      }
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

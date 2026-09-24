@@ -48,6 +48,25 @@ public class FareClient {
         }
     }
 
+    public PaymentResponse getPaymentStatus(String rideId, String authorizationHeader) {
+        HttpHeaders headers = new HttpHeaders();
+        if (authorizationHeader != null) {
+            headers.set(HttpHeaders.AUTHORIZATION, authorizationHeader);
+        }
+        try {
+            return restTemplate.exchange(
+                    fareServiceBaseUrl + "/api/payments/" + rideId + "/status",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    PaymentResponse.class
+            ).getBody();
+        } catch (HttpClientErrorException.NotFound e) {
+            return null; // Payment does not exist
+        } catch (RestClientException e) {
+            throw new PaymentServiceUnavailableException("Fare & payment service is unavailable");
+        }
+    }
+
     public static class DuplicatePaymentException extends RuntimeException {
         public DuplicatePaymentException(String message) {
             super(message);

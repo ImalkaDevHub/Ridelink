@@ -159,6 +159,12 @@ export const rideApi = {
 
   get: (id: number | string, token: string) => request<Ride>(`${RIDE_API}/api/rides/${id}`, {}, token),
 
+  listByPassenger: (passengerId: string | number, token: string) =>
+    request<Ride[]>(`${RIDE_API}/api/rides?passengerId=${passengerId}`, {}, token),
+
+  listByDriver: (driverId: string | number, token: string) =>
+    request<Ride[]>(`${RIDE_API}/api/rides?driverId=${driverId}`, {}, token),
+
   complete: (id: number | string, body: { distanceKm: number; durationMin: number }, token: string) =>
     request<Ride>(`${RIDE_API}/api/rides/${id}/complete`, { method: "PATCH", body: JSON.stringify(body) }, token),
 };
