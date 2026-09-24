@@ -63,14 +63,24 @@ public class RideController {
     @ApiResponse(responseCode = "200", description = "List of rides for passenger or driver")
     public ResponseEntity<?> getRides(
             @RequestParam(required = false) String passengerId,
-            @RequestParam(required = false) Long driverId) {
+            @RequestParam(required = false) Long driverId,
+            @RequestParam(required = false) String status) {
+        
+        java.util.List<com.ridelink.ride_service.model.Ride> rides = java.util.Collections.emptyList();
+
         if (passengerId != null) {
-            return ResponseEntity.ok(rideService.getRidesByPassenger(passengerId));
+            rides = rideService.getRidesByPassenger(passengerId);
+        } else if (driverId != null) {
+            rides = rideService.getRidesByDriver(driverId);
         }
-        if (driverId != null) {
-            return ResponseEntity.ok(rideService.getRidesByDriver(driverId));
+
+        if (status != null && !rides.isEmpty()) {
+            rides = rides.stream()
+                         .filter(ride -> status.equalsIgnoreCase(ride.getStatus()))
+                         .collect(java.util.stream.Collectors.toList());
         }
-        return ResponseEntity.ok(java.util.Collections.emptyList());
+
+        return ResponseEntity.ok(rides);
     }
 
     // Only a driver (or an admin) may complete a ride. This is a role-level

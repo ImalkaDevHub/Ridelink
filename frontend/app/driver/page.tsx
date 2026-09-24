@@ -36,6 +36,8 @@ function DriverDashboard() {
   const [completedRide, setCompletedRide] = useState<Ride | null>(null);
   
   const [driverRides, setDriverRides] = useState<Ride[]>([]);
+  const [dailyEarnings, setDailyEarnings] = useState(0);
+  const [completedRidesCount, setCompletedRidesCount] = useState(0);
 
   useEffect(() => {
     if (ready && (!session || session.role !== "DRIVER")) router.push("/login");
@@ -44,11 +46,22 @@ function DriverDashboard() {
   useEffect(() => {
     if (!session?.driverProfileId || !session?.token) {
       setDriverRides([]);
+      setDailyEarnings(0);
+      setCompletedRidesCount(0);
       return;
     }
     rideApi.listByDriver(session.driverProfileId, session.token)
-      .then(setDriverRides)
-      .catch(() => setDriverRides([]));
+      .then((rides) => {
+        setDriverRides(rides);
+        const completed = rides.filter((r) => r.status === "COMPLETED");
+        setCompletedRidesCount(completed.length);
+        setDailyEarnings(completed.reduce((sum, r) => sum + (r.fare || 0), 0));
+      })
+      .catch(() => {
+        setDriverRides([]);
+        setDailyEarnings(0);
+        setCompletedRidesCount(0);
+      });
   }, [session?.driverProfileId, session?.token, completedRide]);
 
   useEffect(() => {
@@ -125,11 +138,8 @@ function DriverDashboard() {
   if (!ready || !session) return null;
 
   // Logic to calculate stats from real backend data
-  const completedRides = driverRides.filter((ride) => ride.status === "COMPLETED");
-  const totalEarnings = completedRides.reduce((sum, ride) => sum + (ride.fare || 0), 0);
   const dailyGoal = 10;
-  const completedCount = completedRides.length;
-  const progressPercentage = Math.min((completedCount / dailyGoal) * 100, 100);
+  const progressPercentage = Math.min((completedRidesCount / dailyGoal) * 100, 100);
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -151,14 +161,14 @@ function DriverDashboard() {
         }}>
           <div>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, opacity: 0.8, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Daily Earnings</div>
-            <div style={{ fontFamily: "var(--font-heading)", fontSize: 44, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>LKR {totalEarnings.toFixed(2)}</div>
-            <div style={{ fontSize: 14.5, opacity: 0.85, marginTop: 10, fontWeight: 500 }}>from {completedCount} completed rides</div>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 44, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>LKR {dailyEarnings.toFixed(2)}</div>
+            <div style={{ fontSize: 14.5, opacity: 0.85, marginTop: 10, fontWeight: 500 }}>from {completedRidesCount} completed rides</div>
           </div>
           
           <div style={{ display: "flex", alignItems: "center", gap: 24, background: "rgba(255, 255, 255, 0.15)", padding: "16px 24px", borderRadius: 12 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>Daily Goal</div>
-              <div style={{ fontSize: 14, opacity: 0.9 }}>{completedCount} / {dailyGoal} Rides</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>{completedRidesCount} / {dailyGoal} Rides</div>
             </div>
             
             {/* SVG Circular Progress Chart */}
@@ -227,50 +237,56 @@ function DriverDashboard() {
         </Card>
 
         <Card>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Complete a ride</div>
-          <InfoBanner>
-            Ride Service has no &quot;rides assigned to me&quot; endpoint yet, so there is no live
-            queue here - enter the ride id a passenger (or the assignment flow) gave you.
-          </InfoBanner>
-          <div style={{ height: 16 }} />
-
-          <Field label="Ride id" value={rideId} onChange={(e) => setRideId(e.target.value)} placeholder="e.g. 1" />
-
-          <button
-            type="button"
-            onClick={lookupRide}
-            disabled={!rideId}
-            style={{
-              width: "100%",
-              marginBottom: 14,
-              fontFamily: "var(--font-heading)",
-              fontSize: 13.5,
-              fontWeight: 600,
-              background: "transparent",
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              padding: 12,
-              cursor: "pointer",
-              color: "var(--text)",
-            }}
-          >
-            Look up ride
-          </button>
-          <ErrorBanner message={lookupError} />
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Live Queue (Assigned Rides)</div>
+          
+          {driverRides.filter(r => r.status === "ASSIGNED" || r.status === "IN_PROGRESS").length === 0 ? (
+            <InfoBanner>No active rides assigned to you at the moment. Waiting for requests...</InfoBanner>
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              {driverRides
+                .filter(r => r.status === "ASSIGNED" || r.status === "IN_PROGRESS")
+                .map(ride => (
+                  <div key={ride.id} style={{ border: `1px solid ${lookedUpRide?.id === ride.id ? "var(--accent)" : "var(--line)"}`, borderRadius: 8, padding: 14, background: lookedUpRide?.id === ride.id ? "rgba(255, 196, 0, 0.03)" : "transparent", transition: "all 0.2s" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>Ride #{ride.id}</span>
+                      <StatusBadge status={ride.status} />
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
+                      {ride.pickup} &rarr; {ride.destination}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setRideId(String(ride.id)); setLookedUpRide(ride); setCompleteError(null); setCompletedRide(null); }}
+                      style={{
+                        width: "100%",
+                        fontFamily: "var(--font-heading)",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        background: lookedUpRide?.id === ride.id ? "var(--accent)" : "transparent",
+                        border: `1px solid ${lookedUpRide?.id === ride.id ? "var(--accent)" : "var(--line)"}`,
+                        borderRadius: 6,
+                        padding: "8px",
+                        cursor: "pointer",
+                        color: lookedUpRide?.id === ride.id ? "#111" : "var(--text)",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {lookedUpRide?.id === ride.id ? "Currently Viewing" : "View / Complete"}
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
 
           {lookedUpRide && (
-            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginTop: 4, marginBottom: 18 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 13.5 }}>
-                  {lookedUpRide.pickup} &rarr; {lookedUpRide.destination}
-                </span>
-                <StatusBadge status={lookedUpRide.status} />
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 18, marginTop: 18 }}>
+              <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
+                Completing Ride #{lookedUpRide.id}
               </div>
-
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <Field label="Distance (km)" type="number" step="0.1" value={lookedUpRide.distance ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, distance: e.target.value })} />
-                <Field label="Duration (min)" type="number" step="1" value={lookedUpRide.duration ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, duration: e.target.value })} />
-                <Field label="Fare (LKR)" type="number" value={lookedUpRide.fare ?? ""} disabled onChange={(e) => setLookedUpRide({ ...lookedUpRide, fare: e.target.value })} />
+                <Field label="Distance (km)" type="number" step="0.1" value={lookedUpRide.distance ?? ""} disabled onChange={() => {}} />
+                <Field label="Duration (min)" type="number" step="1" value={lookedUpRide.duration ?? ""} disabled onChange={() => {}} />
+                <Field label="Fare (LKR)" type="number" value={lookedUpRide.fare ?? ""} disabled onChange={() => {}} />
               </div>
 
               <PrimaryButton onClick={completeRide} disabled={completing || lookedUpRide.status === "COMPLETED"}>

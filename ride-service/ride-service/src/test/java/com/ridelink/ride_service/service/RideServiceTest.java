@@ -152,17 +152,23 @@ class RideServiceTest {
     }
 
     @Test
-    void completeRide_whenARideIsSomehowAlreadyPaid_rideIsNotSavedAndPaymentAlreadyExistsExceptionPropagates() {
+    void completeRide_whenARideIsSomehowAlreadyPaid_gracefullySucceedsAndMarksCompleted() {
         Ride ride = assignedRide();
         when(rideRepository.findById(1L)).thenReturn(Optional.of(ride));
+        
+        // Simulating the race condition where getPaymentStatus initially returns null
+        when(fareClient.getPaymentStatus(anyString(), any())).thenReturn(null);
+        
+        // But finalizePayment throws the conflict exception because another request just created it
         when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any()))
                 .thenThrow(new FareClient.DuplicatePaymentException("A payment already exists for ride: 1"));
+                
+        // The service should gracefully swallow it and save as COMPLETED
+        when(rideRepository.save(ride)).thenReturn(ride);
 
-        assertThatThrownBy(() -> rideService.completeRide(1L, 5.0, 12.0))
-                .isInstanceOf(RideService.PaymentAlreadyExistsException.class);
+        Ride result = rideService.completeRide(1L, 5.0, 12.0);
 
-        assertThat(ride.getStatus()).isEqualTo("ASSIGNED"); // left unchanged
-        verify(rideRepository, never()).save(any());
+        assertThat(result.getStatus()).isEqualTo("COMPLETED");
     }
 
     // Note: the @PreAuthorize("hasAuthority('DRIVER') or hasAuthority('ADMIN')")
