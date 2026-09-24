@@ -4,16 +4,16 @@ package com.ridelink.ride_service.dto;
 // ride-service actually reads are needed.
 public class PaymentResponse {
 
-    private Long id;
+    private String id;
     private String rideId;
     private double finalFare;
     private String status;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

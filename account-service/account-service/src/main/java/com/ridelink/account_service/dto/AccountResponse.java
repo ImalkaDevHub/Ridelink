@@ -3,13 +3,13 @@ package com.ridelink.account_service.dto;
 // Outbound account representation. Deliberately has no password field.
 public class AccountResponse {
 
-    private Long id;
+    private String id;
     private String name;
     private String email;
     private String role;
     private String status;
 
-    public AccountResponse(Long id, String name, String email, String role, String status) {
+    public AccountResponse(String id, String name, String email, String role, String status) {
         this.id = id;
         this.name = name;
         this.email = email;
@@ -17,11 +17,11 @@ public class AccountResponse {
         this.status = status;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

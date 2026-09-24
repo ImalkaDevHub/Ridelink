@@ -73,7 +73,7 @@ public class AccountController {
     @ApiResponse(responseCode = "200", description = "Profile found - never includes the password",
             content = @Content(schema = @Schema(implementation = AccountResponse.class)))
     @ApiResponse(responseCode = "404", description = "No account with this id")
-    public ResponseEntity<?> getProfile(@PathVariable Long id) {
+    public ResponseEntity<?> getProfile(@PathVariable String id) {
         try {
             return ResponseEntity.ok(accountService.getProfile(id));
         } catch (AccountService.AccountNotFoundException e) {
@@ -86,7 +86,7 @@ public class AccountController {
             content = @Content(schema = @Schema(implementation = AccountResponse.class)))
     @ApiResponse(responseCode = "404", description = "No account with this id")
     @ApiResponse(responseCode = "409", description = "Email already used by another account")
-    public ResponseEntity<?> updateProfile(@PathVariable Long id, @Valid @RequestBody ProfileUpdateRequest request) {
+    public ResponseEntity<?> updateProfile(@PathVariable String id, @Valid @RequestBody ProfileUpdateRequest request) {
         try {
             return ResponseEntity.ok(accountService.updateProfile(id, request));
         } catch (AccountService.AccountNotFoundException e) {
@@ -103,7 +103,7 @@ public class AccountController {
     @ApiResponse(responseCode = "400", description = "Status must be ACTIVE or SUSPENDED")
     @ApiResponse(responseCode = "403", description = "Caller does not have the ADMIN authority")
     @ApiResponse(responseCode = "404", description = "No account with this id")
-    public ResponseEntity<?> setStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<?> setStatus(@PathVariable String id, @RequestParam String status) {
         try {
             return ResponseEntity.ok(accountService.setStatus(id, status));
         } catch (AccountService.AccountNotFoundException e) {

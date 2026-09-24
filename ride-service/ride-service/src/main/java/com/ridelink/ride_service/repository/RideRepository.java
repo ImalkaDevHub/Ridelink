@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RideRepository extends MongoRepository<Ride, String> {
     java.util.List<Ride> findByPassengerIdOrderByIdDesc(String passengerId);
-    java.util.List<Ride> findByDriverIdOrderByIdDesc(Long driverId);
+    java.util.List<Ride> findByDriverIdOrderByIdDesc(String driverId);
 }

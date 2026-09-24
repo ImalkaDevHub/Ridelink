@@ -63,7 +63,7 @@ public class RideController {
     @ApiResponse(responseCode = "200", description = "List of rides for passenger or driver")
     public ResponseEntity<?> getRides(
             @RequestParam(required = false) String passengerId,
-            @RequestParam(required = false) Long driverId,
+            @RequestParam(required = false) String driverId,
             @RequestParam(required = false) String status) {
         
         java.util.List<com.ridelink.ride_service.model.Ride> rides = java.util.Collections.emptyList();
