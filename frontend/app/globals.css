@@ -78,6 +78,14 @@ button {
   }
 }
 
+.login-grid {
+  background-image: url("/image/bike.webp");
+  background-size: cover;
+  background-position: center;
+}
+.login-left-panel {
+  display: none !important;
+}
 .login-right-panel {
   background: transparent;
 }
@@ -89,7 +97,23 @@ button {
   backdrop-filter: blur(8px);
 }
 
+.hero-text-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  padding: 16px 20px;
+  border-radius: 12px;
+}
+
 @media (min-width: 640px) {
+  .login-grid {
+    background-image: none;
+  }
+  .login-left-panel {
+    display: flex !important;
+    background-image: url("/image/bike.webp");
+    background-size: cover;
+    background-position: center;
+  }
   .login-right-panel {
     background: var(--card);
   }
