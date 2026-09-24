@@ -6,6 +6,7 @@ import NavBar from "@/components/NavBar";
 import { Field, PrimaryButton, Card, ErrorBanner, InfoBanner, StatusBadge } from "@/components/ui";
 import { driverApi, rideApi, ApiError, type Ride } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { formatDisplayId } from "@/lib/format";
 
 // useSearchParams() (read below, for the ?newDriverId= redirect after
 // registration) requires a Suspense boundary around anything that calls it,
@@ -89,8 +90,8 @@ function DriverDashboard() {
 
   async function toggleOnline() {
     if (!session || !session.token) return;
-    const id = Number(driverProfileId);
-    if (!Number.isFinite(id) || id <= 0) {
+    const id = driverProfileId;
+    if (!id) {
       setTogglingError("Could not determine your Driver Profile ID. Please try refreshing.");
       return;
     }
@@ -207,7 +208,7 @@ function DriverDashboard() {
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
 
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
-            Automatically linked to Account #{session?.id}. Your Driver Profile ID is <strong>#{driverProfileId || "..."}</strong>.
+            Automatically linked to Account {formatDisplayId(session?.id)}. Your Driver Profile ID is <strong>{formatDisplayId(driverProfileId)}</strong>.
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
@@ -247,7 +248,7 @@ function DriverDashboard() {
                 .map(ride => (
                   <div key={ride.id} style={{ border: `1px solid ${lookedUpRide?.id === ride.id ? "var(--accent)" : "var(--line)"}`, borderRadius: 8, padding: 14, background: lookedUpRide?.id === ride.id ? "rgba(255, 196, 0, 0.03)" : "transparent", transition: "all 0.2s" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>Ride #{ride.id}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>Ride {formatDisplayId(ride.id)}</span>
                       <StatusBadge status={ride.status} />
                     </div>
                     <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
@@ -280,7 +281,7 @@ function DriverDashboard() {
           {lookedUpRide && (
             <div style={{ borderTop: "1px solid var(--line)", paddingTop: 18, marginTop: 18 }}>
               <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                Completing Ride #{lookedUpRide.id}
+                Completing Ride {formatDisplayId(lookedUpRide.id)}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
                 <Field label="Distance (km)" type="number" step="0.1" value={lookedUpRide.distance ?? ""} disabled onChange={() => {}} />

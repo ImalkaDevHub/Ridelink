@@ -10,10 +10,10 @@ import type { Role } from "./api";
 // it here alongside the session.
 export interface Session {
   token: string;
-  id: number;
+  id: string;
   name: string;
   role: Role;
-  driverProfileId?: number;
+  driverProfileId?: string;
 }
 
 interface AuthContextValue {
