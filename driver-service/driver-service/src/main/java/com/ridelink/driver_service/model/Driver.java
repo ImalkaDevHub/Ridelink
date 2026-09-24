@@ -13,6 +13,8 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long accountId;
+
     @NotBlank(message = "name is required")
     private String name;
 
@@ -36,6 +38,14 @@ public class Driver {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(Long accountId) {
+        this.accountId = accountId;
     }
 
     public String getName() {

@@ -139,6 +139,8 @@ export const driverApi = {
     token: string
   ) => request<Driver>(`${DRIVER_API}/api/drivers`, { method: "POST", body: JSON.stringify(body) }, token),
 
+  getMyProfile: (token: string) => request<Driver>(`${DRIVER_API}/api/drivers/me`, {}, token),
+
   available: () => request<Driver[]>(`${DRIVER_API}/api/drivers/available`),
 
   // Callable anonymously or with a DRIVER token - see driver-service's

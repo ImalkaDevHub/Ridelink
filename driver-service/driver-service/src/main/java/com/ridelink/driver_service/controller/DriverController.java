@@ -27,6 +27,8 @@ public class DriverController {
 
     @PostMapping
     public ResponseEntity<Driver> create(@Valid @RequestBody Driver driver) {
+        String accountIdStr = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        driver.setAccountId(Long.valueOf(accountIdStr));
         return ResponseEntity.status(HttpStatus.CREATED).body(driverService.createDriver(driver));
     }
 
@@ -36,6 +38,17 @@ public class DriverController {
     @SecurityRequirements
     public List<Driver> getAvailable() {
         return driverService.getAvailableDrivers();
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAuthority('DRIVER')")
+    public ResponseEntity<?> getMyProfile() {
+        try {
+            String accountIdStr = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            return ResponseEntity.ok(driverService.getDriverByAccountId(Long.valueOf(accountIdStr)));
+        } catch (DriverService.DriverNotFoundException e) {
+            return errorResponse(HttpStatus.NOT_FOUND, "DRIVER_NOT_FOUND", e.getMessage());
+        }
     }
 
     // Dual-purpose endpoint: called by a driver toggling their own

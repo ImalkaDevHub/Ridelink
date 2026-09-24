@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface DriverRepository extends JpaRepository<Driver, Long> {
     List<Driver> findByAvailableTrue();
+    java.util.Optional<Driver> findByAccountId(Long accountId);
 }

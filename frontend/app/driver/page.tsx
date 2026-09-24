@@ -65,31 +65,27 @@ function DriverDashboard() {
   }, [session?.driverProfileId, session?.token, completedRide]);
 
   useEffect(() => {
-    // Syncing local form state (and the persisted session) to the
-    // ?newDriverId= query param set right after registration - a one-time
-    // reconciliation with an external source (the URL), not state that
-    // could instead be computed during render.
-    const fromRegistration = searchParams.get("newDriverId");
-    if (fromRegistration) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDriverProfileId(fromRegistration);
-      updateSession({ driverProfileId: Number(fromRegistration) });
-    } else if (session?.driverProfileId) {
-      setDriverProfileId(String(session.driverProfileId));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, session?.driverProfileId]);
-
-  function saveDriverProfileId() {
-    const id = Number(driverProfileId);
-    if (Number.isFinite(id) && id > 0) updateSession({ driverProfileId: id });
-  }
+    if (!ready || !session || session.role !== "DRIVER") return;
+    
+    // Auto-fetch the driver profile linked to this account
+    driverApi.getMyProfile(session.token)
+      .then((profile) => {
+        setDriverProfileId(String(profile.id));
+        setAvailable(profile.available);
+        if (session.driverProfileId !== profile.id) {
+          updateSession({ driverProfileId: profile.id });
+        }
+      })
+      .catch((e) => {
+        console.error("Could not fetch driver profile", e);
+      });
+  }, [ready, session?.id, session?.token, updateSession]);
 
   async function toggleOnline() {
-    if (!session) return;
+    if (!session || !session.token) return;
     const id = Number(driverProfileId);
     if (!Number.isFinite(id) || id <= 0) {
-      setTogglingError("Enter your driver profile id first (shown when you created your vehicle).");
+      setTogglingError("Could not determine your Driver Profile ID. Please try refreshing.");
       return;
     }
     setTogglingError(null);
@@ -198,18 +194,9 @@ function DriverDashboard() {
         <Card>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
 
-          <Field
-            label="Driver Service profile id"
-            value={driverProfileId}
-            onChange={(e) => setDriverProfileId(e.target.value)}
-            onBlur={saveDriverProfileId}
-            placeholder="e.g. 3"
-          />
-          <p style={{ marginTop: -6, marginBottom: 18, fontSize: 12, color: "var(--muted)" }}>
-            Account Service and Driver Service don&apos;t share an id today, so this is the id
-            Driver Service gave your vehicle profile - shown right after you registered, or ask
-            whoever created it.
-          </p>
+          <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
+            Automatically linked to Account #{session?.id}. Your Driver Profile ID is <strong>#{driverProfileId || "..."}</strong>.
+          </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <span style={{ fontFamily: "var(--font-heading)", fontSize: 13, fontWeight: 600 }}>{available ? "Online" : "Offline"}</span>
