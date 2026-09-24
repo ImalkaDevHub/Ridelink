@@ -75,8 +75,8 @@ export default function AuthPage() {
     return (
       <div style={{ minHeight: "100vh" }}>
         <NavBar label="/register" />
-        <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
-          <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "60px 20px", minHeight: "calc(100vh - 46px)", backgroundImage: 'url("/image/car.jpeg")', backgroundSize: "cover", backgroundPosition: "center" }}>
+          <div style={{ width: "100%", maxWidth: 460, background: "rgba(255, 255, 255, 0.9)", padding: 40, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.1)", backdropFilter: "blur(4px)" }}>
             <h2 style={{ fontFamily: "var(--font-heading)", fontSize: 24, fontWeight: 700, marginBottom: 8 }}>
               Set up your vehicle
             </h2>
