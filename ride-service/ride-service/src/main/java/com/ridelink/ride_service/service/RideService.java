@@ -46,7 +46,7 @@ public class RideService {
         return rideRepository.save(ride);
     }
 
-    public Ride getRide(Long id) {
+    public Ride getRide(String id) {
         return rideRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ride not found with id: " + id));
     }
@@ -68,7 +68,7 @@ public class RideService {
     // fails (network error, or the ride turns out to already be paid), the
     // ride is left in its prior status instead, so the ride and payment
     // records can never drift out of sync.
-    public Ride completeRide(Long id, double distanceKm, double durationMin) {
+    public Ride completeRide(String id, double distanceKm, double durationMin) {
         Ride ride = getRide(id);
 
         if (!"ASSIGNED".equals(ride.getStatus()) && !"IN_PROGRESS".equals(ride.getStatus())) {
@@ -81,12 +81,12 @@ public class RideService {
         try {
             // 1. Before attempting to create a new payment, check if a payment already exists.
             com.ridelink.ride_service.dto.PaymentResponse existingPayment = fareClient.getPaymentStatus(
-                    ride.getId().toString(), authorizationHeader);
+                    ride.getId(), authorizationHeader);
             
             if (existingPayment == null) {
                 // 2. No payment exists yet, finalize the payment.
                 fareClient.finalizePayment(
-                        ride.getId().toString(), ride.getPassengerId(), distanceKm, durationMin, authorizationHeader);
+                        ride.getId(), ride.getPassengerId(), distanceKm, durationMin, authorizationHeader);
             }
         } catch (FareClient.DuplicatePaymentException e) {
             // If it somehow still conflicts concurrently, gracefully handle it instead of throwing 409

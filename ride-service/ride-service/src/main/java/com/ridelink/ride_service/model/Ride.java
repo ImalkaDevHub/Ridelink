@@ -1,6 +1,7 @@
 package com.ridelink.ride_service.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 import jakarta.validation.constraints.NotBlank;
 
 // Bound directly from the request body on creation (see RideController) -
@@ -9,12 +10,11 @@ import jakarta.validation.constraints.NotBlank;
 // here instead. Only client-supplied fields are constrained - passengerId,
 // driverId and status are set by the server after binding, never by the
 // client, so they carry no @NotBlank/@NotNull of their own.
-@Entity
+@Document(collection = "rides")
 public class Ride {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     @NotBlank(message = "passengerName is required")
     private String passengerName;
@@ -36,11 +36,11 @@ public class Ride {
     private Integer duration;
     private Double fare;
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
