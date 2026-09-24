@@ -38,6 +38,7 @@ function DriverDashboard() {
   const [driverRides, setDriverRides] = useState<Ride[]>([]);
   const [dailyEarnings, setDailyEarnings] = useState(0);
   const [completedRidesCount, setCompletedRidesCount] = useState(0);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && (!session || session.role !== "DRIVER")) router.push("/login");
@@ -70,6 +71,7 @@ function DriverDashboard() {
     // Auto-fetch the driver profile linked to this account
     driverApi.getMyProfile(session.token)
       .then((profile) => {
+        setProfileError(null);
         setDriverProfileId(String(profile.id));
         setAvailable(profile.available);
         if (session.driverProfileId !== profile.id) {
@@ -77,7 +79,11 @@ function DriverDashboard() {
         }
       })
       .catch((e) => {
-        console.error("Could not fetch driver profile", e);
+        if (e instanceof ApiError && e.code === "DRIVER_NOT_FOUND") {
+          setProfileError("No vehicle profile is linked to this account (likely because it was created before the recent update). Please log out and register a completely new driver account.");
+        } else {
+          setProfileError(e instanceof ApiError ? e.message : "Could not fetch driver profile. Ensure the Driver Service backend is running.");
+        }
       });
   }, [ready, session?.id, session?.token, updateSession]);
 
@@ -141,8 +147,14 @@ function DriverDashboard() {
     <div style={{ minHeight: "100vh" }}>
       <NavBar label="Driver Service &middot; 8082" />
 
+      {profileError && (
+        <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto" }}>
+          <ErrorBanner message={profileError} />
+        </div>
+      )}
+
       {/* Driver Stats & Daily Earnings Section */}
-      <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto", display: profileError ? "none" : "block" }}>
         <div style={{ 
           background: "linear-gradient(135deg, #FFC400 0%, #F5B800 100%)", 
           borderRadius: 16, 
@@ -190,7 +202,7 @@ function DriverDashboard() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 24, padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ display: profileError ? "none" : "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 24, padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
         <Card>
           <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
 
