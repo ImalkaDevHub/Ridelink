@@ -7,6 +7,36 @@ export default function LandingPage() {
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundImage: 'url("/image/im1.webp")', backgroundSize: "cover", backgroundPosition: "center bottom" }}>
         <NavBar label="/" />
 
+        <header
+          className="desktop-only"
+          style={{
+            alignItems: "center",
+            gap: 28,
+            padding: "22px 40px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <Link href="/login" style={{ fontFamily: "var(--font-heading)", fontSize: 13.5, fontWeight: 500, color: "var(--text)" }}>
+              Sign in
+            </Link>
+            <Link
+              href="/login"
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: 13.5,
+                fontWeight: 600,
+                background: "var(--accent)",
+                color: "#14161a",
+                borderRadius: 7,
+                padding: "11px 18px",
+              }}
+            >
+              Request a ride
+            </Link>
+          </div>
+        </header>
+
         <section
           style={{
             position: "relative",
@@ -81,21 +111,13 @@ export default function LandingPage() {
               <br />
               for your city.
             </h1>
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.4)",
-                backdropFilter: "blur(4px)",
-                padding: "16px 20px",
-                borderRadius: "12px",
-                maxWidth: "44ch",
-              }}
-            >
+            <div className="hero-text-card" style={{ maxWidth: "44ch" }}>
               <p
                 style={{
                   fontSize: 15.5,
                   lineHeight: 1.625,
                   color: "#111827",
-                  margin: "0 0 20px",
+                  margin: "0 0 28px",
                   fontWeight: 500,
                 }}
               >
