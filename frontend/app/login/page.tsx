@@ -100,22 +100,23 @@ export default function AuthPage() {
   return (
     <div style={{ minHeight: "100vh" }}>
       <NavBar label="Account Service &middot; 8081" />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", minHeight: "calc(100vh - 46px)" }}>
-        <div style={{ padding: "56px 40px", display: "flex", flexDirection: "column", justifyContent: "flex-start", borderRight: "1px solid var(--line)", backgroundImage: 'url("/image/bike.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 14 }}>
-            Account Service &middot; 8081
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", minHeight: "calc(100vh - 46px)", backgroundImage: 'url("/image/bike.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
+        <div className="desktop-only" style={{ padding: "56px 40px", flexDirection: "column", justifyContent: "flex-start", borderRight: "1px solid var(--line)" }}>
+          <div style={{ background: "rgba(255, 255, 255, 0.75)", backdropFilter: "blur(4px)", padding: 24, borderRadius: 12 }}>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, fontWeight: 800, color: "#000000", marginBottom: 14 }}>
+              Welcome back to RideLink
+            </div>
+            <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(26px,3.4vw,38px)", fontWeight: 700, letterSpacing: -1, lineHeight: 1.05, margin: "0 0 14px", color: "#000000" }}>
+              Ready to ride?
+            </h2>
+            <p style={{ margin: 0, maxWidth: "38ch", fontSize: 14.5, lineHeight: 1.6, color: "#111111", fontWeight: 500 }}>
+              Sign in to manage your rides, check fares, and update your profile. RideLink connects you directly with the best drivers in your city.
+            </p>
           </div>
-          <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "clamp(26px,3.4vw,38px)", fontWeight: 700, letterSpacing: -1, lineHeight: 1.05, margin: "0 0 14px" }}>
-            Sign in to the board.
-          </h2>
-          <p style={{ margin: 0, maxWidth: "38ch", fontSize: 14.5, lineHeight: 1.6, color: "var(--muted)" }}>
-            One account, one role. Passengers request rides; drivers receive them. A JWT issued
-            here is what every other service validates against.
-          </p>
         </div>
 
-        <div style={{ padding: 40, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card)", color: "var(--card-text)" }}>
-          <div style={{ width: "100%", maxWidth: 420 }}>
+        <div className="login-right-panel" style={{ padding: 40, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--card-text)" }}>
+          <div className="login-form-card" style={{ width: "100%", maxWidth: 420 }}>
             <div style={{ display: "flex", gap: 2, padding: 3, background: "rgba(31,58,95,.1)", borderRadius: 9, marginBottom: 24 }}>
               <button
                 type="button"
@@ -165,7 +166,7 @@ export default function AuthPage() {
 
             <ErrorBanner message={error} />
 
-            <p style={{ margin: "16px 0 0", fontSize: 12.5, color: "var(--muted)" }}>
+            <p className="desktop-only" style={{ margin: "16px 0 0", fontSize: 12.5, color: "var(--muted)" }}>
               {mode === "login"
                 ? "No account yet? Create one - you pick your role then."
                 : "Roles cannot be swapped later; you would register a second account."}

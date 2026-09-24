@@ -62,4 +62,42 @@ button {
   }
 }
 
+.mobile-only {
+  display: block;
+}
+.desktop-only {
+  display: none !important;
+}
 
+@media (min-width: 640px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .desktop-only {
+    display: flex !important;
+  }
+}
+
+.login-right-panel {
+  background: transparent;
+}
+.login-form-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 32px 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 640px) {
+  .login-right-panel {
+    background: var(--card);
+  }
+  .login-form-card {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}

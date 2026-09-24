@@ -53,8 +53,12 @@ export default function PassengerPage() {
     try {
       const ride = await rideApi.get(currentRideId, session.token);
       setCurrentRide(ride);
-    } catch {
-      // A stale/invalid id in localStorage shouldn't break the page.
+    } catch (err: any) {
+      if (err instanceof ApiError && err.status === 404) {
+        setCurrentRideId(null);
+        window.localStorage.removeItem("ridelink.currentRideId");
+      }
+      // A stale/invalid id shouldn't crash the page, but we stop polling if 404.
     }
   }, [currentRideId, session]);
 

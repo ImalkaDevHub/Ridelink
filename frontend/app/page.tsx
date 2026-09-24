@@ -4,38 +4,8 @@ import NavBar from "@/components/NavBar";
 export default function LandingPage() {
   return (
     <div>
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundImage: 'url("/image/im1.webp")', backgroundSize: "cover", backgroundPosition: "center" }}>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundImage: 'url("/image/im1.webp")', backgroundSize: "cover", backgroundPosition: "center bottom" }}>
         <NavBar label="/" />
-
-        <header
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 28,
-            padding: "22px 40px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-            <Link href="/login" style={{ fontFamily: "var(--font-heading)", fontSize: 13.5, fontWeight: 500, color: "var(--text)" }}>
-              Sign in
-            </Link>
-            <Link
-              href="/login"
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontSize: 13.5,
-                fontWeight: 600,
-                background: "var(--accent)",
-                color: "#14161a",
-                borderRadius: 7,
-                padding: "11px 18px",
-              }}
-            >
-              Request a ride
-            </Link>
-          </div>
-        </header>
 
         <section
           style={{
@@ -50,6 +20,7 @@ export default function LandingPage() {
           }}
         >
           <svg
+            className="desktop-only"
             viewBox="0 0 1200 400"
             preserveAspectRatio="xMidYMid slice"
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
@@ -100,7 +71,7 @@ export default function LandingPage() {
               style={{
                 fontFamily: "var(--font-heading)",
                 fontWeight: 700,
-                fontSize: "clamp(30px,4.4vw,52px)",
+                fontSize: "clamp(26px,6vw,52px)",
                 lineHeight: 1.02,
                 letterSpacing: -1.4,
                 margin: "0 0 14px",
@@ -110,38 +81,45 @@ export default function LandingPage() {
               <br />
               for your city.
             </h1>
-            <p
+            <div
               style={{
-                fontSize: 15.5,
-                lineHeight: 1.625,
-                color: "#111827",
-                margin: "0 0 28px",
-                maxWidth: "44ch",
                 background: "rgba(255, 255, 255, 0.4)",
                 backdropFilter: "blur(4px)",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontWeight: 500,
+                padding: "16px 20px",
+                borderRadius: "12px",
+                maxWidth: "44ch",
               }}
             >
-              RideLink matches passengers with drivers who are online right now. You see the fare
-              estimate before you confirm, and the ride&apos;s status while it happens.
-            </p>
-            <Link
-              href="/login"
-              style={{
-                display: "inline-block",
-                fontFamily: "var(--font-heading)",
-                fontSize: 14,
-                fontWeight: 600,
-                background: "var(--accent)",
-                color: "#14161a",
-                borderRadius: 8,
-                padding: "13px 22px",
-              }}
-            >
-              Get started
-            </Link>
+              <p
+                style={{
+                  fontSize: 15.5,
+                  lineHeight: 1.625,
+                  color: "#111827",
+                  margin: "0 0 20px",
+                  fontWeight: 500,
+                }}
+              >
+                RideLink matches passengers with drivers who are online right now. You see the fare
+                estimate before you confirm, and the ride&apos;s status while it happens.
+              </p>
+              <Link
+                href="/login"
+                style={{
+                  display: "inline-block",
+                  fontFamily: "var(--font-heading)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  background: "var(--accent)",
+                  color: "#111111",
+                  borderRadius: 8,
+                  padding: "13px 22px",
+                  textAlign: "center",
+                  width: "100%",
+                }}
+              >
+                Get started
+              </Link>
+            </div>
           </div>
         </section>
       </div>
