@@ -29,8 +29,8 @@ function DriverDashboard() {
   const [toggling, setToggling] = useState(false);
 
   const [rideId, setRideId] = useState("");
-  const [distanceKm, setDistanceKm] = useState("4.2");
-  const [durationMin, setDurationMin] = useState("11");
+  const [distanceKm, setDistanceKm] = useState("");
+  const [durationMin, setDurationMin] = useState("");
   const [lookedUpRide, setLookedUpRide] = useState<Ride | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
