@@ -13,10 +13,10 @@ export default function PassengerPage() {
   const { session, ready } = useAuth();
   const router = useRouter();
 
-  const [pickup, setPickup] = useState("SLIIT");
-  const [destination, setDestination] = useState("Malabe Junction");
-  const [distanceKm, setDistanceKm] = useState("4.2");
-  const [durationMin, setDurationMin] = useState("11");
+  const [pickup, setPickup] = useState("");
+  const [destination, setDestination] = useState("");
+  const [distanceKm, setDistanceKm] = useState("");
+  const [durationMin, setDurationMin] = useState("");
 
   const [estimate, setEstimate] = useState<FareEstimateResponse | null>(null);
   const [estimating, setEstimating] = useState(false);
