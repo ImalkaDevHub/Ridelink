@@ -63,7 +63,7 @@ export default function AuthPage() {
         { name, vehicleNumber, vehicleType, serviceArea },
         needsDriverProfile.token
       );
-      router.push(`/driver?newDriverId=${driver.id}`);
+      router.push("/driver");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not create your driver profile.");
     } finally {
