@@ -7,8 +7,8 @@
   --accent: #FFC400;
   --text: #111111;
   --muted: #666666;
-  --font-heading: var(--font-space-grotesk), "Space Grotesk", system-ui, sans-serif;
-  --font-body: var(--font-ibm-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-heading: var(--font-michroma), "Michroma", system-ui, sans-serif;
+  --font-body: var(--font-poppins), "Poppins", system-ui, sans-serif;
 }
 
 * {
@@ -61,3 +61,4 @@ button {
     stroke-dashoffset: 0;
   }
 }
+
