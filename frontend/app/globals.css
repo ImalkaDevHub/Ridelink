@@ -104,6 +104,12 @@ button {
   border-radius: 12px;
 }
 
+.hero-bg {
+  background-image: url("/image/im1.webp");
+  background-size: cover;
+  background-position: center bottom;
+}
+
 @media (min-width: 640px) {
   .login-grid {
     background-image: none;
@@ -123,5 +129,8 @@ button {
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
+  }
+  .hero-bg {
+    background-position: center;
   }
 }
