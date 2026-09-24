@@ -4,7 +4,7 @@ import NavBar from "@/components/NavBar";
 export default function LandingPage() {
   return (
     <div>
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundImage: 'url("/image/im1.webp")', backgroundSize: "cover", backgroundPosition: "center bottom" }}>
+      <div className="hero-bg" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <NavBar label="/" />
 
         <header
@@ -12,24 +12,21 @@ export default function LandingPage() {
           style={{
             alignItems: "center",
             gap: 28,
-            padding: "22px 40px",
+            padding: "8px 40px 0",
             flexWrap: "wrap",
           }}
         >
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-            <Link href="/login" style={{ fontFamily: "var(--font-heading)", fontSize: 13.5, fontWeight: 500, color: "var(--text)" }}>
-              Sign in
-            </Link>
             <Link
               href="/login"
               style={{
                 fontFamily: "var(--font-heading)",
-                fontSize: 13.5,
+                fontSize: 12,
                 fontWeight: 600,
                 background: "var(--accent)",
                 color: "#14161a",
-                borderRadius: 7,
-                padding: "11px 18px",
+                borderRadius: 6,
+                padding: "8px 14px",
               }}
             >
               Request a ride
