@@ -27,7 +27,7 @@ export default function AuthPage() {
   // they create one here.
   const [needsDriverProfile, setNeedsDriverProfile] = useState<{ token: string } | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState("");
-  const [vehicleType, setVehicleType] = useState("Sedan");
+  const [vehicleType, setVehicleType] = useState("");
   const [serviceArea, setServiceArea] = useState("");
 
   async function submit() {
