@@ -27,11 +27,6 @@ public class AccountController {
     private AccountService accountService;
 
     // Controller methods return ResponseEntity<?> because a single method
-    // can return either the success DTO or an error body, depending on
-    // which exception (if any) is caught - springdoc can't infer a schema
-    // from a wildcard generic type, so each @ApiResponse below spells out
-    // the real status code and schema explicitly instead of leaving
-    // Swagger UI to guess "200, generic object" for everything.
 
     // Public - no token exists yet at registration time. Overrides the
     // service-wide default security requirement so Swagger UI doesn't show
@@ -113,10 +108,4 @@ public class AccountController {
         }
     }
 
-    private ResponseEntity<Map<String, String>> errorResponse(HttpStatus status, String code, String message) {
-        Map<String, String> body = new HashMap<>();
-        body.put("code", code);
-        body.put("message", message);
-        return ResponseEntity.status(status).body(body);
-    }
 }
