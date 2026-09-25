@@ -2,7 +2,6 @@ package com.ridelink.account_service.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 @Document(collection = "accounts")
 public class Account {
