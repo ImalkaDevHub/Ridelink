@@ -57,7 +57,7 @@ function DriverDashboard() {
         setDriverRides(rides);
         const completed = rides.filter((r) => r.status === "COMPLETED");
         setCompletedRidesCount(completed.length);
-        setDailyEarnings(completed.reduce((sum, r) => sum + (r.fare || 0), 0));
+        setDailyEarnings(completed.reduce((sum, r) => sum + Number(r.fare || 0), 0));
       })
       .catch(() => {
         setDriverRides([]);
