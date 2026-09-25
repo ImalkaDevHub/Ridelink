@@ -18,7 +18,6 @@ public class RegisterRequest {
     private String password;
 
     // Optional. "PASSENGER" or "DRIVER" - blank defaults to PASSENGER. ADMIN
-    // accounts cannot be created through self-registration.
     private String role;
 
     public String getName() {
@@ -47,9 +46,5 @@ public class RegisterRequest {
 
     public String getRole() {
         return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
     }
 }
