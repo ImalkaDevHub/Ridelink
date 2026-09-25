@@ -4,13 +4,17 @@ import com.ridelink.driver_service.model.Driver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// @DataMongoTest runs findByAvailableTrue() against a real (in-memory H2)
+// @SpringBootTest runs findByAvailableTrue() against a real (in-memory H2)
 // database instead of a mock, because the actual filtering logic lives in
 // Spring Data's derived query, not in any of our own code - a mocked
 // repository test would only prove DriverService calls this method, not
@@ -22,8 +26,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 // There is no other eligibility/filtering logic in this service today
 // (e.g. no service-area matching) - if that's added later, extend this
 // test class alongside it.
-@DataMongoTest
+@SpringBootTest
+@Testcontainers
 class DriverRepositoryTest {
+
+    @Container
+    @ServiceConnection
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0").withExposedPorts(27017);
 
     @Autowired
     private DriverRepository driverRepository;
