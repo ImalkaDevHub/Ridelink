@@ -52,9 +52,9 @@ class DriverServiceTest {
     void setAvailability_whenDriverIdDoesNotExist_throwsDriverNotFoundException() {
         // Protects the 404 DRIVER_NOT_FOUND behaviour in DriverController -
         // before this was fixed, a bad id here caused an unguarded 500.
-        when(driverRepository.findById(99L)).thenReturn(Optional.empty());
+        when(driverRepository.findById("99")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> driverService.setAvailability(99L, true))
+        assertThatThrownBy(() -> driverService.setAvailability("99", true))
                 .isInstanceOf(DriverService.DriverNotFoundException.class);
 
         verify(driverRepository, never()).save(any());
@@ -63,12 +63,12 @@ class DriverServiceTest {
     @Test
     void setAvailability_whenDriverExists_flipsTheAvailableFlagAndSaves() {
         Driver driver = new Driver();
-        driver.setId(1L);
+        driver.setId("1");
         driver.setAvailable(true);
-        when(driverRepository.findById(1L)).thenReturn(Optional.of(driver));
+        when(driverRepository.findById("1")).thenReturn(Optional.of(driver));
         when(driverRepository.save(driver)).thenReturn(driver);
 
-        Driver updated = driverService.setAvailability(1L, false);
+        Driver updated = driverService.setAvailability("1", false);
 
         assertThat(updated.isAvailable()).isFalse();
         verify(driverRepository).save(driver);

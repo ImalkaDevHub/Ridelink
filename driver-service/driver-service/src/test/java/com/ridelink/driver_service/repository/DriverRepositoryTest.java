@@ -1,15 +1,16 @@
 package com.ridelink.driver_service.repository;
 
 import com.ridelink.driver_service.model.Driver;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.data.mongodb.test.autoconfigure.DataMongoTest;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// @DataJpaTest runs findByAvailableTrue() against a real (in-memory H2)
+// @DataMongoTest runs findByAvailableTrue() against a real (in-memory H2)
 // database instead of a mock, because the actual filtering logic lives in
 // Spring Data's derived query, not in any of our own code - a mocked
 // repository test would only prove DriverService calls this method, not
@@ -21,11 +22,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 // There is no other eligibility/filtering logic in this service today
 // (e.g. no service-area matching) - if that's added later, extend this
 // test class alongside it.
-@DataJpaTest
+@DataMongoTest
 class DriverRepositoryTest {
 
     @Autowired
     private DriverRepository driverRepository;
+
+    @BeforeEach
+    void cleanUp() {
+        driverRepository.deleteAll();
+    }
 
     @Test
     void findByAvailableTrue_returnsOnlyDriversMarkedAvailable() {
