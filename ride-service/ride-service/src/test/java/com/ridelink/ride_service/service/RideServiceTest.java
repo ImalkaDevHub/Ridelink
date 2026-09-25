@@ -65,7 +65,7 @@ class RideServiceTest {
 
     private Ride assignedRide() {
         Ride ride = new Ride();
-        ride.setId(1L);
+        ride.setId("1");
         ride.setPassengerId("42");
         ride.setStatus("ASSIGNED");
         return ride;
@@ -90,14 +90,14 @@ class RideServiceTest {
     @Test
     void requestRide_whenADriverIsAvailable_assignsTheDriverAndSetsStatusAssigned() {
         DriverResponse driver = new DriverResponse();
-        driver.setId(7L);
+        driver.setId("7");
         when(driverClient.findAndReserveAvailableDriver()).thenReturn(driver);
         when(rideRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Ride requested = new Ride();
         Ride result = rideService.requestRide(requested);
 
-        assertThat(result.getDriverId()).isEqualTo(7L);
+        assertThat(result.getDriverId()).isEqualTo("7");
         assertThat(result.getStatus()).isEqualTo("ASSIGNED");
         assertThat(result.getPassengerId()).isEqualTo("42"); // from the authenticated caller
     }
@@ -107,10 +107,10 @@ class RideServiceTest {
     @Test
     void completeRide_whenRideIsAssigned_succeedsAndMarksCompleted() {
         Ride ride = assignedRide();
-        when(rideRepository.findById(1L)).thenReturn(Optional.of(ride));
+        when(rideRepository.findById("1")).thenReturn(Optional.of(ride));
         when(rideRepository.save(ride)).thenReturn(ride);
 
-        Ride result = rideService.completeRide(1L, 5.0, 12.0);
+        Ride result = rideService.completeRide("1", 5.0, 12.0);
 
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
         verify(fareClient).finalizePayment(eq("1"), eq("42"), eq(5.0), eq(12.0), any());
@@ -120,9 +120,9 @@ class RideServiceTest {
     void completeRide_whenRideIsAlreadyCompleted_throwsInvalidStatusTransitionException() {
         Ride ride = assignedRide();
         ride.setStatus("COMPLETED");
-        when(rideRepository.findById(1L)).thenReturn(Optional.of(ride));
+        when(rideRepository.findById("1")).thenReturn(Optional.of(ride));
 
-        assertThatThrownBy(() -> rideService.completeRide(1L, 5.0, 12.0))
+        assertThatThrownBy(() -> rideService.completeRide("1", 5.0, 12.0))
                 .isInstanceOf(RideService.InvalidStatusTransitionException.class);
 
         // Rejected before ever attempting to charge the passenger again.
@@ -140,11 +140,11 @@ class RideServiceTest {
     @Test
     void completeRide_whenFarePaymentServiceIsUnreachable_rideIsNotSavedAndPaymentFailedExceptionPropagates() {
         Ride ride = assignedRide();
-        when(rideRepository.findById(1L)).thenReturn(Optional.of(ride));
+        when(rideRepository.findById("1")).thenReturn(Optional.of(ride));
         when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any()))
                 .thenThrow(new FareClient.PaymentServiceUnavailableException("Fare & payment service is unavailable"));
 
-        assertThatThrownBy(() -> rideService.completeRide(1L, 5.0, 12.0))
+        assertThatThrownBy(() -> rideService.completeRide("1", 5.0, 12.0))
                 .isInstanceOf(RideService.PaymentFailedException.class);
 
         assertThat(ride.getStatus()).isEqualTo("ASSIGNED"); // left unchanged
@@ -154,7 +154,7 @@ class RideServiceTest {
     @Test
     void completeRide_whenARideIsSomehowAlreadyPaid_gracefullySucceedsAndMarksCompleted() {
         Ride ride = assignedRide();
-        when(rideRepository.findById(1L)).thenReturn(Optional.of(ride));
+        when(rideRepository.findById("1")).thenReturn(Optional.of(ride));
         
         // Simulating the race condition where getPaymentStatus initially returns null
         when(fareClient.getPaymentStatus(anyString(), any())).thenReturn(null);
@@ -166,7 +166,7 @@ class RideServiceTest {
         // The service should gracefully swallow it and save as COMPLETED
         when(rideRepository.save(ride)).thenReturn(ride);
 
-        Ride result = rideService.completeRide(1L, 5.0, 12.0);
+        Ride result = rideService.completeRide("1", 5.0, 12.0);
 
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
     }
