@@ -37,6 +37,47 @@ export function Field({
   );
 }
 
+export function SelectField({
+  label,
+  options,
+  ...props
+}: { label: string; options: { value: string; label: string }[] } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <label style={{ display: "block", marginBottom: 14 }}>
+      <span
+        style={{
+          display: "block",
+          fontFamily: "var(--font-heading)",
+          fontSize: 11.5,
+          fontWeight: 600,
+          color: "var(--muted)",
+          marginBottom: 5,
+        }}
+      >
+        {label}
+      </span>
+      <select
+        {...props}
+        style={{
+          width: "100%",
+          padding: "11px 12px",
+          border: "1px solid rgba(31,58,95,.3)",
+          borderRadius: 8,
+          background: "#fff",
+          color: "#14161a",
+          fontSize: 14,
+          cursor: "pointer",
+          ...props.style,
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export function PrimaryButton({
   children,
   disabled,

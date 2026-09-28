@@ -22,6 +22,8 @@ public class Payment {
     private double distanceKm;
     private double durationMin;
 
+    private String vehicleType;
+
     private PaymentStatus status = PaymentStatus.PENDING;
 
     private String paymentMethod = "SIMULATED_CARD";
@@ -75,6 +77,14 @@ public class Payment {
 
     public void setDurationMin(double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 
     public PaymentStatus getStatus() {

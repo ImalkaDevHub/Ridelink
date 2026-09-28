@@ -29,7 +29,7 @@ public class RideService {
     private HttpServletRequest request;
 
     public Ride requestRide(Ride ride) {
-        DriverResponse driver = driverClient.findAndReserveAvailableDriver();
+        DriverResponse driver = driverClient.findAndReserveAvailableDriver(ride.getVehicleType());
 
         if (driver == null) {
             throw new NoDriverAvailableException("No driver is available right now.");
@@ -86,7 +86,7 @@ public class RideService {
             if (existingPayment == null) {
                 // 2. No payment exists yet, finalize the payment.
                 fareClient.finalizePayment(
-                        ride.getId(), ride.getPassengerId(), distanceKm, durationMin, authorizationHeader);
+                        ride.getId(), ride.getPassengerId(), distanceKm, durationMin, ride.getVehicleType(), authorizationHeader);
             }
         } catch (FareClient.DuplicatePaymentException e) {
             // If it somehow still conflicts concurrently, gracefully handle it instead of throwing 409

@@ -24,9 +24,9 @@ public class FareClient {
 
     // Forwards the original caller's "Bearer <token>" value as-is, since
     // fare-payment-service requires authentication on this endpoint.
-    public PaymentResponse finalizePayment(String rideId, String passengerId, double distanceKm, double durationMin,
+    public PaymentResponse finalizePayment(String rideId, String passengerId, double distanceKm, double durationMin, String vehicleType,
                                             String authorizationHeader) {
-        FinalizePaymentRequest body = new FinalizePaymentRequest(rideId, passengerId, distanceKm, durationMin);
+        FinalizePaymentRequest body = new FinalizePaymentRequest(rideId, passengerId, distanceKm, durationMin, vehicleType);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

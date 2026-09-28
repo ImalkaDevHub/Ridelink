@@ -17,6 +17,7 @@ export default function PassengerPage() {
   const [destination, setDestination] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [durationMin, setDurationMin] = useState("");
+  const [vehicleType, setVehicleType] = useState("Car");
 
   const [estimate, setEstimate] = useState<FareEstimateResponse | null>(null);
   const [estimating, setEstimating] = useState(false);
@@ -68,6 +69,7 @@ export default function PassengerPage() {
         destinationLocation: destination,
         distanceKm: Number(distanceKm),
         durationMin: Number(durationMin),
+        vehicleType
       });
       setEstimate(result);
     } catch (e) {
@@ -85,7 +87,7 @@ export default function PassengerPage() {
       const distance = Number(distanceKm || 0);
       const duration = Number(durationMin || 0);
       const fare = estimate?.estimatedFare;
-      await rideApi.request({ passengerName: session.name, pickup, destination, distance, duration, fare }, session.token);
+      await rideApi.request({ passengerName: session.name, pickup, destination, distance, duration, fare, vehicleType }, session.token);
       refreshRide();
     } catch (e) {
       setRequestError(e instanceof ApiError ? e.message : "Could not reach Ride Service.");
@@ -115,6 +117,32 @@ export default function PassengerPage() {
             Fare & Payment Service calculates from distance and duration - there is no mapping/routing
             engine in this system, so these are entered directly.
           </p>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13.5, color: "var(--muted)", marginBottom: 8 }}>Vehicle Type</label>
+            <div style={{ display: "flex", gap: 10 }}>
+              {["Bike", "Tuk", "Car", "Van"].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setVehicleType(type)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 0",
+                    borderRadius: 8,
+                    border: `1px solid ${vehicleType === type ? "var(--accent)" : "var(--line)"}`,
+                    background: vehicleType === type ? "rgba(255, 196, 0, 0.1)" : "transparent",
+                    color: vehicleType === type ? "var(--accent)" : "var(--text)",
+                    fontWeight: vehicleType === type ? 600 : 400,
+                    cursor: "pointer",
+                    fontSize: 13.5,
+                  }}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             type="button"

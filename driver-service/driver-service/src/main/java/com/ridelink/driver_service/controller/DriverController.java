@@ -36,8 +36,11 @@ public class DriverController {
     // calls with no token.
     @GetMapping("/available")
     @SecurityRequirements
-    public List<Driver> getAvailable() {
-        return driverService.getAvailableDrivers();
+    public ResponseEntity<List<Driver>> getAvailable(@RequestParam(required = false) String type) {
+        if (type != null && !type.isBlank()) {
+            return ResponseEntity.ok(driverService.getAvailableDriversByType(type));
+        }
+        return ResponseEntity.ok(driverService.getAvailableDrivers());
     }
 
     @GetMapping("/me")

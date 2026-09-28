@@ -16,6 +16,9 @@ public class Ride {
     @Id
     private String id;
 
+    @NotBlank(message = "Vehicle type is required")
+    private String vehicleType;
+
     @NotBlank(message = "passengerName is required")
     private String passengerName;
     // The authenticated requester's account id (from the JWT), captured at
@@ -42,6 +45,14 @@ public class Ride {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 
     public String getPassengerName() {
