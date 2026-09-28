@@ -21,6 +21,10 @@ public class DriverService {
         return driverRepository.findByAvailableTrue();
     }
 
+    public List<Driver> getAvailableDriversByType(String vehicleType) {
+        return driverRepository.findByAvailableTrueAndVehicleTypeIgnoreCase(vehicleType);
+    }
+
     public Driver getDriverByAccountId(String accountId) {
         return driverRepository.findByAccountId(accountId)
                 .orElseThrow(() -> new DriverNotFoundException("No driver profile found for account id: " + accountId));

@@ -19,10 +19,11 @@ public class DriverClient {
     @Value("${driver.service.base-url}")
     private String driverServiceBaseUrl;
 
-    public DriverResponse findAndReserveAvailableDriver() {
+    public DriverResponse findAndReserveAvailableDriver(String vehicleType) {
         try {
+            String url = driverServiceBaseUrl + "/api/drivers/available" + (vehicleType != null ? "?type=" + vehicleType : "");
             DriverResponse[] drivers = restTemplate.getForObject(
-                    driverServiceBaseUrl + "/api/drivers/available",
+                    url,
                     DriverResponse[].class
             );
 

@@ -31,7 +31,7 @@ public class FareService {
     public FareEstimateResponse estimate(FareEstimateRequest request) {
         // distanceKm/durationMin > 0 is enforced by @Valid on the request DTO
         // and, as a second line of defence, by FareCalculator itself.
-        double fare = fareCalculator.calculate(request.getDistanceKm(), request.getDurationMin());
+        double fare = fareCalculator.calculate(request.getDistanceKm(), request.getDurationMin(), request.getVehicleType());
 
         FareEstimate estimate = new FareEstimate();
         estimate.setPickupLocation(request.getPickupLocation());
@@ -59,13 +59,14 @@ public class FareService {
             throw new DuplicatePaymentException("A payment already exists for ride: " + request.getRideId());
         }
 
-        double fare = fareCalculator.calculate(request.getDistanceKm(), request.getDurationMin());
+        double fare = fareCalculator.calculate(request.getDistanceKm(), request.getDurationMin(), request.getVehicleType());
 
         Payment payment = new Payment();
         payment.setRideId(request.getRideId());
         payment.setPassengerId(request.getPassengerId());
         payment.setDistanceKm(request.getDistanceKm());
         payment.setDurationMin(request.getDurationMin());
+        payment.setVehicleType(request.getVehicleType());
         payment.setFinalFare(fare);
         // Simulated payment processing - no real gateway involved.
         payment.setStatus(PaymentStatus.COMPLETED);
@@ -86,7 +87,7 @@ public class FareService {
             throw new PaymentNotFoundException("No completed payment found for ride: " + rideId);
         }
 
-        String breakdown = fareCalculator.describeBreakdown(payment.getDistanceKm(), payment.getDurationMin());
+        String breakdown = fareCalculator.describeBreakdown(payment.getDistanceKm(), payment.getDurationMin(), payment.getVehicleType());
 
         return new ReceiptResponse(
                 payment.getRideId(),

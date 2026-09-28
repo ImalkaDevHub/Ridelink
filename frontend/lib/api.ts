@@ -156,7 +156,7 @@ export const driverApi = {
 // ---- ride-service (8083) -------------------------------------------------
 
 export const rideApi = {
-  request: (body: { passengerName: string; pickup: string; destination: string; distance?: number; duration?: number; fare?: number }, token: string) =>
+  request: (body: { passengerName: string; pickup: string; destination: string; distance?: number; duration?: number; fare?: number; vehicleType: string }, token: string) =>
     request<Ride>(`${RIDE_API}/api/rides`, { method: "POST", body: JSON.stringify(body) }, token),
 
   get: (id: number | string, token: string) => request<Ride>(`${RIDE_API}/api/rides/${id}`, {}, token),
@@ -174,7 +174,7 @@ export const rideApi = {
 // ---- fare-payment-service (8084) -----------------------------------------
 
 export const fareApi = {
-  estimate: (body: { pickupLocation: string; destinationLocation: string; distanceKm: number; durationMin: number }) =>
+  estimate: (body: { pickupLocation: string; destinationLocation: string; distanceKm: number; durationMin: number; vehicleType: string }) =>
     request<FareEstimateResponse>(`${FARE_API}/api/fares/estimate`, { method: "POST", body: JSON.stringify(body) }),
 
   status: (rideId: number | string, token: string) =>

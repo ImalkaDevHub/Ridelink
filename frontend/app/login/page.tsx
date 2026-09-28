@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
-import { Field, PrimaryButton, ErrorBanner } from "@/components/ui";
+import { Field, SelectField, PrimaryButton, ErrorBanner } from "@/components/ui";
 import { accountApi, driverApi, ApiError, type Role } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -27,7 +27,7 @@ export default function AuthPage() {
   // they create one here.
   const [needsDriverProfile, setNeedsDriverProfile] = useState<{ token: string } | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState("");
-  const [vehicleType, setVehicleType] = useState("");
+  const [vehicleType, setVehicleType] = useState("Car");
   const [serviceArea, setServiceArea] = useState("");
 
   async function submit() {
@@ -85,7 +85,17 @@ export default function AuthPage() {
               online - vehicle details, and the service area you drive in.
             </p>
             <Field label="Vehicle number" value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="CAB-1024" />
-            <Field label="Vehicle type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} placeholder="Sedan" />
+            <SelectField 
+              label="Vehicle type" 
+              value={vehicleType} 
+              onChange={(e) => setVehicleType(e.target.value)}
+              options={[
+                { value: "Car", label: "Car" },
+                { value: "Bike", label: "Bike" },
+                { value: "Tuk", label: "Tuk" },
+                { value: "Van", label: "Van" },
+              ]}
+            />
             <Field label="Service area" value={serviceArea} onChange={(e) => setServiceArea(e.target.value)} placeholder="Malabe" />
             <PrimaryButton onClick={submitDriverProfile} disabled={busy}>
               {busy ? "Saving..." : "Create driver profile"}

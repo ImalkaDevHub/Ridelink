@@ -20,6 +20,9 @@ public class FareEstimateRequest {
     @Positive(message = "durationMin must be positive")
     private Double durationMin;
 
+    @NotBlank(message = "Vehicle type is required")
+    private String vehicleType;
+
     public String getPickupLocation() {
         return pickupLocation;
     }
@@ -50,5 +53,13 @@ public class FareEstimateRequest {
 
     public void setDurationMin(Double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 }

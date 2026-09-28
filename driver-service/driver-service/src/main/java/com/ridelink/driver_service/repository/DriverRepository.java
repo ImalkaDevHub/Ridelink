@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface DriverRepository extends MongoRepository<Driver, String> {
     List<Driver> findByAvailableTrue();
+    List<Driver> findByAvailableTrueAndVehicleTypeIgnoreCase(String vehicleType);
     java.util.Optional<Driver> findByAccountId(String accountId);
 }
