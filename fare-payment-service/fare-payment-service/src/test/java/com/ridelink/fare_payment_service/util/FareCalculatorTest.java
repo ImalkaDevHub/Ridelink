@@ -20,14 +20,14 @@ class FareCalculatorTest {
             "0.5, 2.5, 150.0",    // 100 + 25 + 25
     })
     void calculatesFareUsingTheDocumentedFormula(double distanceKm, double durationMin, double expectedFare) {
-        assertThat(calculator.calculate(distanceKm, durationMin)).isEqualTo(expectedFare);
+        assertThat(calculator.calculate(distanceKm, durationMin, "Car")).isEqualTo(expectedFare);
     }
 
     @Test
     void roundsToTwoDecimalPlaces() {
         FareCalculator oddRates = new FareCalculator(10.111, 3.333, 1.111);
 
-        double fare = oddRates.calculate(2.0, 3.0);
+        double fare = oddRates.calculate(2.0, 3.0, "Car");
 
         // 10.111 + 3.333*2 + 1.111*3 = 10.111 + 6.666 + 3.333 = 20.11 (rounded)
         assertThat(fare).isEqualTo(20.11);
@@ -35,23 +35,23 @@ class FareCalculatorTest {
 
     @Test
     void rejectsNonPositiveDistance() {
-        assertThatThrownBy(() -> calculator.calculate(0.0, 5.0))
+        assertThatThrownBy(() -> calculator.calculate(0.0, 5.0, "Car"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> calculator.calculate(-1.0, 5.0))
+        assertThatThrownBy(() -> calculator.calculate(-1.0, 5.0, "Car"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void rejectsNonPositiveDuration() {
-        assertThatThrownBy(() -> calculator.calculate(5.0, 0.0))
+        assertThatThrownBy(() -> calculator.calculate(5.0, 0.0, "Car"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> calculator.calculate(5.0, -1.0))
+        assertThatThrownBy(() -> calculator.calculate(5.0, -1.0, "Car"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void breakdownStatesEachTermAndTheTotal() {
-        String breakdown = calculator.describeBreakdown(5.0, 12.0);
+        String breakdown = calculator.describeBreakdown(5.0, 12.0, "Car");
 
         assertThat(breakdown)
                 .contains("100.00")   // base fare
