@@ -217,6 +217,17 @@ The full stack is also deployed and reachable online — Render for the four Spr
 | `POST` | `/api/payments/finalize` | Interservice: calculate final fare, record a simulated payment |
 | `GET` | `/api/payments/{rideId}/status` | Check a payment's status |
 | `GET` | `/api/payments/{rideId}/receipt` | Retrieve a completed payment's receipt |
+
+**Fare formula:** `finalFare = baseFare + (perKm × distanceKm) + (perMin × durationMin)`, rounded to 2 decimal places.
+
+| Vehicle type | Base fare | Per km | Per min |
+|---|---|---|---|
+| Car (default, set in `application.properties`) | 100.00 | 50.00 | 10.00 |
+| Bike | 40.00 | 20.00 | 5.00 |
+| Tuk | 50.00 | 30.00 | 8.00 |
+| Van | 150.00 | 75.00 | 15.00 |
+
+Each ride can be paid only once. A second finalize call for the same `rideId` returns `409 DUPLICATE_PAYMENT`.
  
 ---
  
