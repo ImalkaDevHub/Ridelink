@@ -59,4 +59,22 @@ class FareCalculatorTest {
                 .contains("120.00")   // 10/min * 12min
                 .contains("470.00");  // total
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "Bike, 5.0, 12.0, 200.0",  // 40 + 20*5 + 5*12
+            "Tuk,  5.0, 12.0, 296.0",  // 50 + 30*5 + 8*12
+            "Van,  5.0, 12.0, 705.0",  // 150 + 75*5 + 15*12
+            "bike, 1.0, 1.0,  65.0",   // vehicle type is case-insensitive
+    })
+    void appliesVehicleSpecificRates(String vehicleType, double distanceKm, double durationMin, double expectedFare) {
+        assertThat(calculator.calculate(distanceKm, durationMin, vehicleType)).isEqualTo(expectedFare);
+    }
+
+    @Test
+    void unknownVehicleTypeFallsBackToDefaultRates() {
+        FareCalculator.Rates rates = calculator.ratesFor("Spaceship");
+
+        assertThat(rates).isEqualTo(new FareCalculator.Rates(100.0, 50.0, 10.0));
+    }
 }
