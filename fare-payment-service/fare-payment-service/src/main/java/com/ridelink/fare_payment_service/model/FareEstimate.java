@@ -20,6 +20,7 @@ public class FareEstimate {
 
     private double distanceKm;
     private double durationMin;
+    private String vehicleType;
     private double estimatedFare;
 
     private Instant createdAt = Instant.now();
@@ -70,6 +71,14 @@ public class FareEstimate {
 
     public void setDurationMin(double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 
     public double getEstimatedFare() {

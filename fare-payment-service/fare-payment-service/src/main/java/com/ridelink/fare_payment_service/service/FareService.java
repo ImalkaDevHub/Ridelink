@@ -39,6 +39,7 @@ public class FareService {
         estimate.setDestinationLocation(request.getDestinationLocation());
         estimate.setDistanceKm(request.getDistanceKm());
         estimate.setDurationMin(request.getDurationMin());
+        estimate.setVehicleType(request.getVehicleType());
         estimate.setEstimatedFare(fare);
         fareEstimateRepository.save(estimate);
 
