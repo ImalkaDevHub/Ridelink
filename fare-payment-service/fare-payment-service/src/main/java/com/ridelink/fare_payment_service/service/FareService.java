@@ -32,6 +32,7 @@ public class FareService {
         // distanceKm/durationMin > 0 is enforced by @Valid on the request DTO
         // and, as a second line of defence, by FareCalculator itself.
         double fare = fareCalculator.calculate(request.getDistanceKm(), request.getDurationMin(), request.getVehicleType());
+        FareCalculator.Rates rates = fareCalculator.ratesFor(request.getVehicleType());
 
         FareEstimate estimate = new FareEstimate();
         estimate.setPickupLocation(request.getPickupLocation());
@@ -46,9 +47,10 @@ public class FareService {
                 request.getDestinationLocation(),
                 request.getDistanceKm(),
                 request.getDurationMin(),
-                fareCalculator.getBaseFare(),
-                fareCalculator.getPerKm(),
-                fareCalculator.getPerMin(),
+                request.getVehicleType(),
+                rates.baseFare(),
+                rates.perKm(),
+                rates.perMin(),
                 fare);
     }
 

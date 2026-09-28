@@ -6,18 +6,20 @@ public class FareEstimateResponse {
     private String destinationLocation;
     private double distanceKm;
     private double durationMin;
+    private String vehicleType;
     private double baseFare;
     private double perKmRate;
     private double perMinRate;
     private double estimatedFare;
 
     public FareEstimateResponse(String pickupLocation, String destinationLocation, double distanceKm,
-                                 double durationMin, double baseFare, double perKmRate, double perMinRate,
+                                 double durationMin, String vehicleType, double baseFare, double perKmRate, double perMinRate,
                                  double estimatedFare) {
         this.pickupLocation = pickupLocation;
         this.destinationLocation = destinationLocation;
         this.distanceKm = distanceKm;
         this.durationMin = durationMin;
+        this.vehicleType = vehicleType;
         this.baseFare = baseFare;
         this.perKmRate = perKmRate;
         this.perMinRate = perMinRate;
@@ -54,6 +56,14 @@ public class FareEstimateResponse {
 
     public void setDurationMin(double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 
     public double getBaseFare() {
