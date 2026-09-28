@@ -98,6 +98,7 @@ public class FareService {
                 payment.getFinalFare(),
                 payment.getDistanceKm(),
                 payment.getDurationMin(),
+                payment.getVehicleType(),
                 payment.getPaymentMethod(),
                 payment.getStatus().name(),
                 payment.getCompletedAt(),

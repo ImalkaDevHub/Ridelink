@@ -9,19 +9,21 @@ public class ReceiptResponse {
     private double finalFare;
     private double distanceKm;
     private double durationMin;
+    private String vehicleType;
     private String paymentMethod;
     private String status;
     private Instant completedAt;
     private String breakdown;
 
     public ReceiptResponse(String rideId, String passengerId, double finalFare, double distanceKm,
-                            double durationMin, String paymentMethod, String status, Instant completedAt,
+                            double durationMin, String vehicleType, String paymentMethod, String status, Instant completedAt,
                             String breakdown) {
         this.rideId = rideId;
         this.passengerId = passengerId;
         this.finalFare = finalFare;
         this.distanceKm = distanceKm;
         this.durationMin = durationMin;
+        this.vehicleType = vehicleType;
         this.paymentMethod = paymentMethod;
         this.status = status;
         this.completedAt = completedAt;
@@ -66,6 +68,14 @@ public class ReceiptResponse {
 
     public void setDurationMin(double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 
     public String getPaymentMethod() {
