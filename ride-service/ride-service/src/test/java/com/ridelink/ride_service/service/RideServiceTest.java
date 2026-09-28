@@ -78,7 +78,7 @@ class RideServiceTest {
         // DriverClient itself returns null (not an exception) when the
         // available-drivers list is empty - this is the NO_DRIVER_AVAILABLE
         // path surfaced as a 409 by RideController.
-        when(driverClient.findAndReserveAvailableDriver()).thenReturn(null);
+        when(driverClient.findAndReserveAvailableDriver(any())).thenReturn(null);
 
         Ride requested = new Ride();
         assertThatThrownBy(() -> rideService.requestRide(requested))
@@ -91,7 +91,7 @@ class RideServiceTest {
     void requestRide_whenADriverIsAvailable_assignsTheDriverAndSetsStatusAssigned() {
         DriverResponse driver = new DriverResponse();
         driver.setId("7");
-        when(driverClient.findAndReserveAvailableDriver()).thenReturn(driver);
+        when(driverClient.findAndReserveAvailableDriver(any())).thenReturn(driver);
         when(rideRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Ride requested = new Ride();
@@ -113,7 +113,7 @@ class RideServiceTest {
         Ride result = rideService.completeRide("1", 5.0, 12.0);
 
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
-        verify(fareClient).finalizePayment(eq("1"), eq("42"), eq(5.0), eq(12.0), any());
+        verify(fareClient).finalizePayment(eq("1"), eq("42"), eq(5.0), eq(12.0), any(), any());
     }
 
     @Test
@@ -126,7 +126,7 @@ class RideServiceTest {
                 .isInstanceOf(RideService.InvalidStatusTransitionException.class);
 
         // Rejected before ever attempting to charge the passenger again.
-        verify(fareClient, never()).finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any());
+        verify(fareClient, never()).finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), anyString(), any());
         verify(rideRepository, never()).save(any());
     }
 
@@ -141,7 +141,7 @@ class RideServiceTest {
     void completeRide_whenFarePaymentServiceIsUnreachable_rideIsNotSavedAndPaymentFailedExceptionPropagates() {
         Ride ride = assignedRide();
         when(rideRepository.findById("1")).thenReturn(Optional.of(ride));
-        when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any()))
+        when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any(), any()))
                 .thenThrow(new FareClient.PaymentServiceUnavailableException("Fare & payment service is unavailable"));
 
         assertThatThrownBy(() -> rideService.completeRide("1", 5.0, 12.0))
@@ -160,7 +160,7 @@ class RideServiceTest {
         when(fareClient.getPaymentStatus(anyString(), any())).thenReturn(null);
         
         // But finalizePayment throws the conflict exception because another request just created it
-        when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any()))
+        when(fareClient.finalizePayment(anyString(), anyString(), anyDouble(), anyDouble(), any(), any()))
                 .thenThrow(new FareClient.DuplicatePaymentException("A payment already exists for ride: 1"));
                 
         // The service should gracefully swallow it and save as COMPLETED
