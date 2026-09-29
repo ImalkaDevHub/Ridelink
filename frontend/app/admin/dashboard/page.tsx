@@ -24,12 +24,15 @@ interface AdminDriver {
   email: string;
   vehicleType: string;
   status: "ACTIVE" | "SUSPENDED";
+  available: boolean;
+  currentRideId?: string | null;
 }
 
 const MOCK_DRIVERS: AdminDriver[] = [
-  { id: "d1", userId: "u1", name: "John Doe", email: "john@example.com", vehicleType: "Car", status: "ACTIVE" },
-  { id: "d2", userId: "u2", name: "Jane Smith", email: "jane@example.com", vehicleType: "Van", status: "SUSPENDED" },
-  { id: "d3", userId: "u3", name: "Bob Johnson", email: "bob@example.com", vehicleType: "Bike", status: "ACTIVE" },
+  { id: "d1", userId: "u1", name: "John Doe", email: "john@example.com", vehicleType: "Car", status: "ACTIVE", available: true },
+  { id: "d2", userId: "u2", name: "Jane Smith", email: "jane@example.com", vehicleType: "Van", status: "SUSPENDED", available: false },
+  { id: "d3", userId: "u3", name: "Bob Johnson", email: "bob@example.com", vehicleType: "Bike", status: "ACTIVE", available: false },
+  { id: "d4", userId: "u4", name: "Alice Brown", email: "alice@example.com", vehicleType: "Car", status: "ACTIVE", available: false, currentRideId: "ride123" },
 ];
 
 const AdminDashboard = () => {
@@ -68,7 +71,9 @@ const AdminDashboard = () => {
             name: d.name,
             email: d.email || "driver@ridelink.com", 
             vehicleType: d.vehicleType || "N/A",
-            status: d.status || "ACTIVE"
+            status: d.status || "ACTIVE",
+            available: !!d.available,
+            currentRideId: d.currentRideId || null
           }));
           setDrivers(mappedData);
         } else {
@@ -132,6 +137,7 @@ const AdminDashboard = () => {
   const totalRegistered = drivers.length;
   const activeCount = drivers.filter(d => d.status === 'ACTIVE').length;
   const suspendedCount = drivers.filter(d => d.status === 'SUSPENDED').length;
+  const onlineCount = drivers.filter(d => d.available).length;
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-sans antialiased text-slate-800">
@@ -226,7 +232,7 @@ const AdminDashboard = () => {
         </header>
 
         {/* 3. OVERVIEW METRICS CARDS */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 my-8">
           
           {/* Total Drivers Card */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-amber-400 to-amber-300 p-6 text-slate-950 shadow-lg shadow-amber-500/15">
@@ -241,16 +247,16 @@ const AdminDashboard = () => {
             </div>
             <div className="mt-4 flex items-center gap-1 text-xs font-bold text-slate-900 relative z-10">
               <ArrowUpRight size={15} />
-              <span>Full active fleet</span>
+              <span>Full fleet</span>
             </div>
             <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/20 rounded-full blur-2xl pointer-events-none" />
           </div>
 
-          {/* Active Drivers Card */}
+          {/* Active Accounts Card */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg shadow-slate-900/15">
             <div className="flex justify-between items-start relative z-10">
               <div>
-                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Active Drivers</p>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Active Accounts</p>
                 <h3 className="text-4xl font-black mt-2 tracking-tight text-white">{activeCount}</h3>
               </div>
               <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl">
@@ -258,16 +264,15 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 relative z-10">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Ready to accept rides</span>
+              <span>Non-suspended accounts</span>
             </div>
           </div>
 
-          {/* Suspended Drivers Card */}
+          {/* Suspended Accounts Card */}
           <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/90 p-6 text-slate-900 shadow-sm">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Suspended Drivers</p>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Suspended Accounts</p>
                 <h3 className="text-4xl font-black mt-2 tracking-tight text-red-600">{suspendedCount}</h3>
               </div>
               <div className="p-3 bg-red-50 rounded-2xl">
@@ -275,7 +280,24 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="mt-4 text-xs font-semibold text-slate-400">
-              Accounts currently restricted
+              Accounts restricted
+            </div>
+          </div>
+
+          {/* Online Now Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/90 p-6 text-slate-900 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Online Now</p>
+                <h3 className="text-4xl font-black mt-2 tracking-tight text-emerald-600">{onlineCount}</h3>
+              </div>
+              <div className="p-3 bg-emerald-50 rounded-2xl">
+                <Car size={24} className="text-emerald-500" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Ready for dispatch
             </div>
           </div>
 
@@ -306,7 +328,8 @@ const AdminDashboard = () => {
                   <th className="py-4 px-6">Driver Name</th>
                   <th className="py-4 px-6">Email Address</th>
                   <th className="py-4 px-6">Vehicle Type</th>
-                  <th className="py-4 px-6">Status</th>
+                  <th className="py-4 px-6">Account Status</th>
+                  <th className="py-4 px-6">Live Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -338,6 +361,24 @@ const AdminDashboard = () => {
                           </span>
                         )}
                       </td>
+                      <td className="py-4 px-6">
+                        {driver.currentRideId ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                            ON TRIP
+                          </span>
+                        ) : driver.available ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            ONLINE
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                            OFFLINE
+                          </span>
+                        )}
+                      </td>
                       <td className="py-4 px-6 text-right">
                         <button
                           onClick={() => handleToggleStatus(driver)}
@@ -354,7 +395,7 @@ const AdminDashboard = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
                       <div className="flex flex-col items-center justify-center">
                         <Users className="w-12 h-12 text-slate-200 mb-3" />
                         <p className="text-slate-500 font-medium">No drivers found matching your search.</p>
