@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import NavBar from "@/components/NavBar";
-import { useAuth } from "@/lib/auth";
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  Users, 
+  CheckCircle2, 
+  XCircle, 
+  Search, 
+  Bell, 
+  LayoutDashboard, 
+  Car, 
+  FileText, 
+  Settings, 
+  LogOut,
+  ArrowUpRight
+} from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 interface AdminDriver {
   id: string; // The ID from driver-service
@@ -14,22 +26,19 @@ interface AdminDriver {
   status: "ACTIVE" | "SUSPENDED";
 }
 
-// Fallback mock data in case backend is offline
 const MOCK_DRIVERS: AdminDriver[] = [
   { id: "d1", userId: "u1", name: "John Doe", email: "john@example.com", vehicleType: "Car", status: "ACTIVE" },
   { id: "d2", userId: "u2", name: "Jane Smith", email: "jane@example.com", vehicleType: "Van", status: "SUSPENDED" },
   { id: "d3", userId: "u3", name: "Bob Johnson", email: "bob@example.com", vehicleType: "Bike", status: "ACTIVE" },
 ];
 
-export default function AdminDashboard() {
+const AdminDashboard = () => {
   const router = useRouter();
-  const { session, ready } = useAuth();
-  
+  const { session, ready, logout } = useAuth();
+
   const [drivers, setDrivers] = useState<AdminDriver[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
-  const [toast, setToast] = useState<{ message: string, type: "success" | "error" } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
 
   // Authentication & Role Protection
   useEffect(() => {
@@ -37,49 +46,56 @@ export default function AdminDashboard() {
     if (!session) {
       router.push("/login");
     } else if (session.role !== "ADMIN") {
-      // Non-admins shouldn't access this route
       router.push(session.role === "DRIVER" ? "/driver" : "/passenger");
     }
   }, [session, ready, router]);
 
-  // Fetch Drivers from API
+  // Fetch Drivers
   useEffect(() => {
     if (!session || session.role !== "ADMIN") return;
 
     const fetchDrivers = async () => {
       try {
-        const res = await fetch("http://localhost:8082/api/drivers", {
+        const res = await fetch('http://localhost:8082/api/drivers', {
           headers: { Authorization: `Bearer ${session.token}` }
         });
         if (res.ok) {
-          const data = await res.json();
-          setDrivers(data);
+          const rawData = await res.json();
+          // Map driver-service 'accountId' to 'userId' for the UI and provide fallbacks
+          const mappedData = rawData.map((d: any) => ({
+            id: d.id,
+            userId: d.accountId || d.userId || d.id, 
+            name: d.name,
+            email: d.email || "driver@ridelink.com", 
+            vehicleType: d.vehicleType || "N/A",
+            status: d.status || "ACTIVE"
+          }));
+          setDrivers(mappedData);
         } else {
           throw new Error(`Failed to fetch drivers: ${res.status}`);
         }
       } catch (err) {
-        console.warn("Backend offline or failed to fetch, using mock data.", err);
+        console.warn('Error fetching drivers, using mock data:', err);
         setDrivers(MOCK_DRIVERS);
-      } finally {
-        setLoading(false);
       }
     };
-    
+
     fetchDrivers();
   }, [session]);
 
-  const handleStatusToggle = async (userId: string, currentStatus: "ACTIVE" | "SUSPENDED") => {
+  const handleToggleStatus = async (driver: AdminDriver) => {
     if (!session) return;
-    const newStatus = currentStatus === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    
-    // Optimistic update
-    setDrivers(prev => prev.map(d => d.userId === userId ? { ...d, status: newStatus } : d));
+    const newStatus = driver.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+
+    // Optimistic Update
+    setDrivers(prev => prev.map(d => (d.userId === driver.userId ? { ...d, status: newStatus } : d)));
 
     try {
-      const res = await fetch(`http://localhost:8081/api/accounts/${userId}/status`, {
-        method: "PATCH",
+      // Pass status as a query parameter because AccountController expects @RequestParam
+      const res = await fetch(`http://localhost:8081/api/accounts/${driver.userId}/status?status=${newStatus}`, {
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${session.token}`
         },
         body: JSON.stringify({ status: newStatus })
@@ -88,185 +104,271 @@ export default function AdminDashboard() {
       if (!res.ok) {
         throw new Error("Failed to update status");
       }
-      showToast(`Driver status updated to ${newStatus}`, "success");
     } catch (err) {
-      console.error(err);
-      // Revert optimistic update on error
-      setDrivers(prev => prev.map(d => d.userId === userId ? { ...d, status: currentStatus } : d));
-      showToast("Failed to update status. Please try again.", "error");
+      console.error('Status update failed:', err);
+      // Revert optimistic update
+      setDrivers(prev => prev.map(d => (d.userId === driver.userId ? { ...d, status: driver.status } : d)));
+      alert('Action failed! Make sure you are authenticated as ADMIN.');
     }
   };
 
-  const showToast = (message: string, type: "success" | "error") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
   };
 
   if (!ready || !session || session.role !== "ADMIN") {
-    // Show a blank screen or a loading state while redirecting
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center text-slate-500 font-medium">Loading Dashboard...</div>;
   }
 
-  // Filter & Search Logic
-  const filteredDrivers = drivers.filter(d => {
-    const matchesSearch = (d.name || "").toLowerCase().includes(search.toLowerCase()) || 
-                          (d.email || "").toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filterStatus === "ALL" || d.status === filterStatus;
-    return matchesSearch && matchesFilter;
+  const filteredDrivers = drivers.filter(driver => {
+    const matchesSearch = 
+      driver.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      driver.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'ALL' || driver.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const totalDrivers = drivers.length;
-  const activeDrivers = drivers.filter(d => d.status === "ACTIVE").length;
-  const suspendedDrivers = drivers.filter(d => d.status === "SUSPENDED").length;
+  const totalRegistered = drivers.length;
+  const activeCount = drivers.filter(d => d.status === 'ACTIVE').length;
+  const suspendedCount = drivers.filter(d => d.status === 'SUSPENDED').length;
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-      <NavBar label="Admin Dashboard" />
+    <div className="flex min-h-screen bg-[#F8FAFC] font-sans antialiased text-slate-800">
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Admin Dashboard</h1>
-          <p className="text-gray-500 mt-1">Manage driver verifications and account statuses</p>
+      {/* 1. SIDEBAR */}
+      <aside className="w-64 bg-slate-900 flex flex-col justify-between p-5 text-slate-300 shadow-xl hidden md:flex h-screen sticky top-0">
+        <div>
+          {/* Brand Logo */}
+          <div className="flex items-center gap-3 px-2 py-4 mb-6">
+            <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-amber-400/20">
+              R
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold tracking-tight text-white flex items-center">
+                Ride<span className="text-amber-400">Link</span>
+              </h1>
+              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Admin Workspace</span>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="space-y-1.5">
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 transition-all">
+              <LayoutDashboard size={19} />
+              <span>Dashboard</span>
+            </a>
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800/80 hover:text-white transition-all">
+              <Users size={19} />
+              <span>Drivers</span>
+            </a>
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800/80 hover:text-white transition-all">
+              <Car size={19} />
+              <span>Live Rides</span>
+            </a>
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800/80 hover:text-white transition-all">
+              <FileText size={19} />
+              <span>Reports</span>
+            </a>
+            <a href="#" className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl hover:bg-slate-800/80 hover:text-white transition-all">
+              <Settings size={19} />
+              <span>Settings</span>
+            </a>
+          </nav>
         </div>
+
+        {/* User profile footer */}
+        <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-amber-400 font-bold text-sm">
+              {session.name ? session.name.substring(0, 2).toUpperCase() : "SA"}
+            </div>
+            <div className="text-xs">
+              <p className="font-semibold text-white max-w-[100px] truncate">{session.name || "System Admin"}</p>
+              <p className="text-slate-400">ADMIN</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 transition"
+            title="Sign out"
+          >
+            <LogOut size={17} />
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. MAIN CONTENT */}
+      <main className="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto">
         
-        {/* Toast Notification */}
-        {toast && (
-          <div className={`fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-50 text-white font-medium transition-all duration-300 transform translate-y-0 opacity-100 ${
-            toast.type === "success" ? "bg-green-600" : "bg-red-600"
-          }`}>
-            {toast.message}
+        {/* Header / Search */}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/80">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-slate-900">Admin Dashboard</h2>
+            <p className="text-sm text-slate-500 font-medium">Manage driver verifications, status, and network activities.</p>
           </div>
-        )}
 
-        {/* Top Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <MetricCard title="Total Registered" value={totalDrivers} color="bg-blue-100 text-blue-800" />
-          <MetricCard title="Active Drivers" value={activeDrivers} color="bg-green-100 text-green-800" />
-          <MetricCard title="Suspended Drivers" value={suspendedDrivers} color="bg-red-100 text-red-800" />
-        </div>
-
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6 items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <div className="w-full md:w-1/3 relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input
+                type="text"
+                placeholder="Search driver by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 w-full md:w-72 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              />
             </div>
-            <input 
-              type="text" 
-              placeholder="Search by name or email..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"
-            />
+            <button className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 shadow-sm transition">
+              <Bell size={18} />
+            </button>
           </div>
-          <div className="w-full md:w-auto">
-            <select 
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all cursor-pointer"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="SUSPENDED">Suspended</option>
-            </select>
-          </div>
-        </div>
+        </header>
 
-        {/* Driver Management Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="inline-block animate-spin w-8 h-8 border-4 border-gray-200 border-t-yellow-400 rounded-full mb-4"></div>
-              <div className="text-gray-500 font-medium">Loading drivers...</div>
+        {/* 3. OVERVIEW METRICS CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+          
+          {/* Total Drivers Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-amber-400 to-amber-300 p-6 text-slate-950 shadow-lg shadow-amber-500/15">
+            <div className="flex justify-between items-start relative z-10">
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-900/70">Total Registered</p>
+                <h3 className="text-4xl font-black mt-2 tracking-tight">{totalRegistered}</h3>
+              </div>
+              <div className="p-3 bg-white/30 backdrop-blur-md rounded-2xl">
+                <Users size={24} className="text-slate-950" />
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead className="bg-gray-50/80 border-b border-gray-200">
-                  <tr>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Driver Name</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle Type</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredDrivers.length > 0 ? (
-                    filteredDrivers.map(driver => (
-                      <tr key={driver.id || driver.userId} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-4 px-6 font-medium text-gray-900">{driver.name}</td>
-                        <td className="py-4 px-6 text-gray-500">{driver.email}</td>
-                        <td className="py-4 px-6 text-gray-700">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                            {driver.vehicleType || "N/A"}
+            <div className="mt-4 flex items-center gap-1 text-xs font-bold text-slate-900 relative z-10">
+              <ArrowUpRight size={15} />
+              <span>Full active fleet</span>
+            </div>
+            <div className="absolute -bottom-8 -right-8 w-28 h-28 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+          </div>
+
+          {/* Active Drivers Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg shadow-slate-900/15">
+            <div className="flex justify-between items-start relative z-10">
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Active Drivers</p>
+                <h3 className="text-4xl font-black mt-2 tracking-tight text-white">{activeCount}</h3>
+              </div>
+              <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-2xl">
+                <CheckCircle2 size={24} className="text-emerald-400" />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 relative z-10">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Ready to accept rides</span>
+            </div>
+          </div>
+
+          {/* Suspended Drivers Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/90 p-6 text-slate-900 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-xs uppercase font-bold tracking-wider text-slate-400">Suspended Drivers</p>
+                <h3 className="text-4xl font-black mt-2 tracking-tight text-red-600">{suspendedCount}</h3>
+              </div>
+              <div className="p-3 bg-red-50 rounded-2xl">
+                <XCircle size={24} className="text-red-500" />
+              </div>
+            </div>
+            <div className="mt-4 text-xs font-semibold text-slate-400">
+              Accounts currently restricted
+            </div>
+          </div>
+
+        </section>
+
+        {/* 4. DRIVER MANAGEMENT TABLE CARD */}
+        <section className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex-1">
+          
+          <div className="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 bg-white/50 backdrop-blur-sm">
+            <h4 className="font-extrabold text-slate-900 text-lg">Registered Fleet Members</h4>
+            <div className="flex items-center gap-3">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active Only</option>
+                <option value="SUSPENDED">Suspended Only</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <th className="py-4 px-6">Driver Name</th>
+                  <th className="py-4 px-6">Email Address</th>
+                  <th className="py-4 px-6">Vehicle Type</th>
+                  <th className="py-4 px-6">Status</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {filteredDrivers.length > 0 ? (
+                  filteredDrivers.map((driver) => (
+                    <tr key={driver.id || driver.userId} className="hover:bg-slate-50/60 transition group">
+                      <td className="py-4 px-6 font-bold text-slate-900">
+                        {driver.name}
+                      </td>
+                      <td className="py-4 px-6 text-slate-500 font-medium">
+                        {driver.email}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">
+                          {driver.vehicleType || 'Car'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        {driver.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            ACTIVE
                           </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                            driver.status === "ACTIVE" 
-                              ? "bg-green-50 text-green-700 border-green-200" 
-                              : "bg-red-50 text-red-700 border-red-200"
-                          }`}>
-                            {driver.status === "ACTIVE" ? (
-                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
-                            ) : (
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            )}
-                            {driver.status}
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 border border-red-200/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            SUSPENDED
                           </span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <button 
-                            onClick={() => handleStatusToggle(driver.userId, driver.status)}
-                            className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                              driver.status === "ACTIVE" 
-                                ? "bg-white text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-500" 
-                                : "bg-white text-green-600 border border-green-200 hover:bg-green-50 focus:ring-green-500"
-                            }`}
-                          >
-                            {driver.status === "ACTIVE" ? "Suspend Driver" : "Activate Driver"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-gray-500">
-                        <svg className="mx-auto h-12 w-12 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                        </svg>
-                        <p className="text-lg font-medium text-gray-900">No drivers found</p>
-                        <p className="text-gray-500 mt-1">Try adjusting your search or filter criteria.</p>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => handleToggleStatus(driver)}
+                          className={`px-4 py-1.5 text-xs font-bold rounded-xl transition duration-200 shadow-sm ${
+                            driver.status === 'ACTIVE'
+                              ? 'border border-red-200 text-red-600 hover:bg-red-50'
+                              : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20'
+                          }`}
+                        >
+                          {driver.status === 'ACTIVE' ? 'Suspend Driver' : 'Activate Driver'}
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                      <div className="flex flex-col items-center justify-center">
+                        <Users className="w-12 h-12 text-slate-200 mb-3" />
+                        <p className="text-slate-500 font-medium">No drivers found matching your search.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
   );
-}
+};
 
-function MetricCard({ title, value, color }: { title: string, value: number, color: string }) {
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between transition-transform hover:-translate-y-1 duration-300">
-      <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</p>
-        <p className="text-3xl font-bold mt-2 text-gray-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-full ${color} bg-opacity-20`}>
-        <svg className={`w-8 h-8 ${color.split(" ")[1]}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          {title.includes("Total") && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />}
-          {title.includes("Active") && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />}
-          {title.includes("Suspended") && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />}
-        </svg>
-      </div>
-    </div>
-  );
-}
+export default AdminDashboard;

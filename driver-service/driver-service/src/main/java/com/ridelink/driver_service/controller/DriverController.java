@@ -32,6 +32,12 @@ public class DriverController {
         return ResponseEntity.status(HttpStatus.CREATED).body(driverService.createDriver(driver));
     }
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<Driver>> getAllDrivers() {
+        return ResponseEntity.ok(driverService.getAllDrivers());
+    }
+
     // Public - this is the interservice lookup ride-service's DriverClient
     // calls with no token.
     @GetMapping("/available")

@@ -17,6 +17,10 @@ public class DriverService {
         return driverRepository.save(driver);
     }
 
+    public List<Driver> getAllDrivers() {
+        return driverRepository.findAll();
+    }
+
     public List<Driver> getAvailableDrivers() {
         return driverRepository.findByAvailableTrue();
     }
