@@ -37,12 +37,20 @@ export default function AuthPage() {
       if (mode === "login") {
         const auth = await accountApi.login({ email, password });
         login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role });
-        router.push(auth.role === "DRIVER" ? "/driver" : "/passenger");
+        if (auth.role === "ADMIN") {
+          router.push("/admin/dashboard");
+        } else if (auth.role === "DRIVER") {
+          router.push("/driver");
+        } else {
+          router.push("/passenger");
+        }
       } else {
         const auth = await accountApi.register({ name, email, password, role });
         login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role });
         if (auth.role === "DRIVER") {
           setNeedsDriverProfile({ token: auth.token });
+        } else if (auth.role === "ADMIN") {
+          router.push("/admin/dashboard");
         } else {
           router.push("/passenger");
         }
