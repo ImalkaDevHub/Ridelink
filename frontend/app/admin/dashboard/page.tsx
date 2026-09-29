@@ -22,19 +22,12 @@ interface AdminDriver {
   id: string; // The ID from driver-service
   userId: string; // The ID from account-service
   name: string;
-  email: string;
+  vehicleNumber: string;
   vehicleType: string;
   status: "ACTIVE" | "SUSPENDED";
   available: boolean;
   currentRideId?: string | null;
 }
-
-const MOCK_DRIVERS: AdminDriver[] = [
-  { id: "d1", userId: "u1", name: "John Doe", email: "john@example.com", vehicleType: "Car", status: "ACTIVE", available: true },
-  { id: "d2", userId: "u2", name: "Jane Smith", email: "jane@example.com", vehicleType: "Van", status: "SUSPENDED", available: false },
-  { id: "d3", userId: "u3", name: "Bob Johnson", email: "bob@example.com", vehicleType: "Bike", status: "ACTIVE", available: false },
-  { id: "d4", userId: "u4", name: "Alice Brown", email: "alice@example.com", vehicleType: "Car", status: "ACTIVE", available: false, currentRideId: "ride123" },
-];
 
 const AdminDashboard = () => {
   const router = useRouter();
@@ -66,7 +59,7 @@ const AdminDashboard = () => {
           id: d.id,
           userId: d.accountId || d.userId || d.id, 
           name: d.name,
-          email: d.email, // Using real email from DB 
+          vehicleNumber: d.vehicleNumber || "N/A", 
           vehicleType: d.vehicleType || "N/A",
           status: d.status || "ACTIVE",
           available: !!d.available,
@@ -77,9 +70,7 @@ const AdminDashboard = () => {
         throw new Error(`Failed to fetch drivers: ${res.status}`);
       }
     } catch (err) {
-      console.warn('Error fetching drivers, using mock data:', err);
-      // Keep mock data only for absolute failure cases where backend is down
-      if (drivers.length === 0) setDrivers(MOCK_DRIVERS);
+      console.error('Error fetching drivers from backend:', err);
     }
   };
 
@@ -137,7 +128,7 @@ const AdminDashboard = () => {
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = 
       driver.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      driver.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      driver.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || driver.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -227,7 +218,7 @@ const AdminDashboard = () => {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input
                 type="text"
-                placeholder="Search driver by name or email..."
+                placeholder="Search driver by name or vehicle no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2.5 w-full md:w-72 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
@@ -341,7 +332,7 @@ const AdminDashboard = () => {
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   <th className="py-4 px-6">Driver Name</th>
-                  <th className="py-4 px-6">Email Address</th>
+                  <th className="py-4 px-6">Vehicle No</th>
                   <th className="py-4 px-6">Vehicle Type</th>
                   <th className="py-4 px-6">Account Status</th>
                   <th className="py-4 px-6">Live Status</th>
@@ -356,7 +347,7 @@ const AdminDashboard = () => {
                         {driver.name}
                       </td>
                       <td className="py-4 px-6 text-slate-500 font-medium">
-                        {driver.email}
+                        {driver.vehicleNumber}
                       </td>
                       <td className="py-4 px-6">
                         <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700">
