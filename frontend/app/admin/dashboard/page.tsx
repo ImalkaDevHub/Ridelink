@@ -13,7 +13,8 @@ import {
   FileText, 
   Settings, 
   LogOut,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
@@ -53,39 +54,46 @@ const AdminDashboard = () => {
     }
   }, [session, ready, router]);
 
-  // Fetch Drivers
+  const fetchDrivers = async () => {
+    if (!session || session.role !== "ADMIN") return;
+    try {
+      const res = await fetch('http://localhost:8082/api/drivers', {
+        headers: { Authorization: `Bearer ${session.token}` }
+      });
+      if (res.ok) {
+        const rawData = await res.json();
+        const mappedData = rawData.map((d: any) => ({
+          id: d.id,
+          userId: d.accountId || d.userId || d.id, 
+          name: d.name,
+          email: d.email, // Using real email from DB 
+          vehicleType: d.vehicleType || "N/A",
+          status: d.status || "ACTIVE",
+          available: !!d.available,
+          currentRideId: d.currentRideId || null
+        }));
+        setDrivers(mappedData);
+      } else {
+        throw new Error(`Failed to fetch drivers: ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('Error fetching drivers, using mock data:', err);
+      // Keep mock data only for absolute failure cases where backend is down
+      if (drivers.length === 0) setDrivers(MOCK_DRIVERS);
+    }
+  };
+
+  // Fetch Drivers initially and poll every 10 seconds
   useEffect(() => {
     if (!session || session.role !== "ADMIN") return;
 
-    const fetchDrivers = async () => {
-      try {
-        const res = await fetch('http://localhost:8082/api/drivers', {
-          headers: { Authorization: `Bearer ${session.token}` }
-        });
-        if (res.ok) {
-          const rawData = await res.json();
-          // Map driver-service 'accountId' to 'userId' for the UI and provide fallbacks
-          const mappedData = rawData.map((d: any) => ({
-            id: d.id,
-            userId: d.accountId || d.userId || d.id, 
-            name: d.name,
-            email: d.email || "driver@ridelink.com", 
-            vehicleType: d.vehicleType || "N/A",
-            status: d.status || "ACTIVE",
-            available: !!d.available,
-            currentRideId: d.currentRideId || null
-          }));
-          setDrivers(mappedData);
-        } else {
-          throw new Error(`Failed to fetch drivers: ${res.status}`);
-        }
-      } catch (err) {
-        console.warn('Error fetching drivers, using mock data:', err);
-        setDrivers(MOCK_DRIVERS);
-      }
-    };
+    fetchDrivers(); // Initial fetch
+    
+    const interval = setInterval(() => {
+      fetchDrivers();
+    }, 10000); // 10 seconds polling
 
-    fetchDrivers();
+    return () => clearInterval(interval);
   }, [session]);
 
   const handleToggleStatus = async (driver: AdminDriver) => {
@@ -225,6 +233,13 @@ const AdminDashboard = () => {
                 className="pl-10 pr-4 py-2.5 w-full md:w-72 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
               />
             </div>
+            <button 
+              onClick={fetchDrivers}
+              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-amber-500 shadow-sm transition"
+              title="Refresh Drivers"
+            >
+              <RefreshCw size={18} />
+            </button>
             <button className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-slate-900 shadow-sm transition">
               <Bell size={18} />
             </button>

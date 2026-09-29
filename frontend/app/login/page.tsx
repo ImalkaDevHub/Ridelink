@@ -68,7 +68,7 @@ export default function AuthPage() {
     setBusy(true);
     try {
       const driver = await driverApi.createProfile(
-        { name, vehicleNumber, vehicleType, serviceArea },
+        { name, email, vehicleNumber, vehicleType, serviceArea },
         needsDriverProfile.token
       );
       router.push("/driver");
