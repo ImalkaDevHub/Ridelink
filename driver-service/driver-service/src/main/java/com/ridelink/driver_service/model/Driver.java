@@ -18,13 +18,17 @@ public class Driver {
     @NotBlank(message = "name is required")
     private String name;
 
+    @org.springframework.data.mongodb.core.index.Indexed(unique = true)
+    @NotBlank(message = "email is required")
+    private String email;
+
     @NotBlank(message = "vehicleNumber is required")
     private String vehicleNumber;
 
     @NotBlank(message = "vehicleType is required")
     private String vehicleType;
 
-    private boolean available = true;
+    private boolean available = false;
 
     @NotBlank(message = "serviceArea is required")
     private String serviceArea;
@@ -54,6 +58,14 @@ public class Driver {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getVehicleNumber() {

@@ -135,7 +135,7 @@ export const accountApi = {
 
 export const driverApi = {
   createProfile: (
-    body: { name: string; vehicleNumber: string; vehicleType: string; serviceArea: string },
+    body: { name: string; email: string; vehicleNumber: string; vehicleType: string; serviceArea: string },
     token: string
   ) => request<Driver>(`${DRIVER_API}/api/drivers`, { method: "POST", body: JSON.stringify(body) }, token),
 
