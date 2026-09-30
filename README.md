@@ -1,6 +1,6 @@
 <div align="center">
-## 🚕 RideLink
- 
+<h1 align="center">🚕 RideLink</h1>
+<img src="assets/ridelink-banner.png" alt="RideLink - A dispatch board for your city" width="800">
 ### Microservices behind a fictional ride-sharing platform — built, broken, and rebuilt until it actually worked.
  
 *IT3130 — Application Development · SLIIT*
@@ -268,10 +268,10 @@ Ridelink/
  
 | Service | Owner |
 |---------|-------|
-| Account Service | *Member 1* |
-| Driver & Vehicle Service | *Member 2* |
-| Ride Management Service | *Member 3* |
-| Fare & Payment Service | *Member 4* |
+| Account Service | *IT24102603-Rajapaksha K.M.P* |
+| Driver & Vehicle Service | *IT24102673 – Sathsarani R.D.S* |
+| Ride Management Service | *IT24102531 - Nishshanka N.P.I.M* |
+| Fare & Payment Service | *IT24102402 - Munasinghe M.S.D * |
  
 ---
  
