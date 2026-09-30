@@ -1,9 +1,11 @@
 <div align="center">
 <h1 align="center">🚕 RideLink</h1>
-<img src="assets/ridelink-banner.png" alt="RideLink - A dispatch board for your city" width="800">
-### Microservices behind a fictional ride-sharing platform — built, broken, and rebuilt until it actually worked.
+<p align="center">
+  <img src="assets/ridelink-banner.png" alt="RideLink - A dispatch board for your city" width="800">
+</p>
+<h3 align="center">Microservices behind a fictional ride-sharing platform — built, broken, and rebuilt until it actually worked.</h3>
  
-*IT3130 — Application Development · SLIIT*
+<p align="center"><em>IT3130 — Application Development · SLIIT</em></p>
  
 [![CI](https://github.com/ImalkaDevHub/Ridelink/actions/workflows/ci.yml/badge.svg)](https://github.com/ImalkaDevHub/Ridelink/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)
@@ -268,10 +270,10 @@ Ridelink/
  
 | Service | Owner |
 |---------|-------|
-| Account Service | *IT24102603-Rajapaksha K.M.P* |
+| Account Service | *IT24102603 – Rajapaksha K.M.P* |
 | Driver & Vehicle Service | *IT24102673 – Sathsarani R.D.S* |
 | Ride Management Service | *IT24102531 - Nishshanka N.P.I.M* |
-| Fare & Payment Service | *IT24102402 - Munasinghe M.S.D * |
+| Fare & Payment Service | *IT24102402 - Munasinghe M.S.D* |
  
 ---
  
