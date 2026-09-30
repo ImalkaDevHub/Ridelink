@@ -1,5 +1,5 @@
 <div align="center">
-# 🚕 RideLink
+## 🚕 RideLink
  
 ### Microservices behind a fictional ride-sharing platform — built, broken, and rebuilt until it actually worked.
  
