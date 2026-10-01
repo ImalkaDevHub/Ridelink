@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 // Bound directly from the request body on creation (see DriverController) -
 // this service has no separate DTO layer, so the validation constraints
-// that would normally live on a request DTO live here instead.
+// that would norrmally live on a request DTO live here instead.
 @Document(collection = "drivers")
 public class Driver {
 

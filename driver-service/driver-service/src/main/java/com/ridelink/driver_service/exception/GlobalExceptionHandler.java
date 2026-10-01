@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 // Catches errors that never reach a controller's own try/catch: bean
-// validation failures on @Valid DTOs, @PreAuthorize access denials,
+// validdation failures on @Valid DTOs, @PreAuthorize access denials,
 // unparseable request bodies and missing required parameters.
 // Keeps the same {"code": ..., "message": ...} shape used by all 4 services.
 @RestControllerAdvice
