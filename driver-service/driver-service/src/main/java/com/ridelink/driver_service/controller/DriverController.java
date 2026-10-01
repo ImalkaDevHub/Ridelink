@@ -65,7 +65,7 @@ public class DriverController {
     // DriverClient with no token at all, to reserve a driver on ride
     // assignment. isAnonymous() lets that existing interservice call
     // through unchanged while still rejecting a non-DRIVER token (e.g. a
-    // PASSENGER's) with 403. @SecurityRequirements is left empty here too,
+    // PASSENGER's) with 403. @SecurittyRequirements is left empty here too,
     // since a token is optional rather than required - Swagger UI's
     // "Authorize" flow is only needed if you want to exercise this as the
     // driver-role self-service call rather than the anonymous one.
