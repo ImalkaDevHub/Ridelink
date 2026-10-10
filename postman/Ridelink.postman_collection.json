@@ -1,0 +1,718 @@
+{
+  "info": {
+    "name": "Ridelink",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Happy Path",
+      "item": [
+        {
+          "name": "1. Register Passenger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set(\"passengerToken\", pm.response.json().token);",
+                  "pm.environment.set(\"passengerId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{accountUrl}}/api/auth/register",
+              "host": [
+                "{{accountUrl}}/api/auth/register"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Pass\", \"email\": \"pass@a.com\", \"password\": \"pass\", \"role\": \"PASSENGER\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "2. Register Driver",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set(\"driverToken\", pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{accountUrl}}/api/auth/register",
+              "host": [
+                "{{accountUrl}}/api/auth/register"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Driv\", \"email\": \"drv@a.com\", \"password\": \"drv\", \"role\": \"DRIVER\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "3. Login Passenger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{accountUrl}}/api/auth/login",
+              "host": [
+                "{{accountUrl}}/api/auth/login"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"pass@a.com\", \"password\": \"pass\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "4. Create Driver Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set(\"driverId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{driverUrl}}/api/drivers",
+              "host": [
+                "{{driverUrl}}/api/drivers"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Driv\", \"email\": \"drv@a.com\", \"vehicleNumber\": \"DEF-1234\", \"vehicleType\": \"Car\", \"serviceArea\": \"Colombo\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Set Available",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{driverUrl}}/api/drivers/{{driverId}}/availability?available=true",
+              "host": [
+                "{{driverUrl}}/api/drivers/{{driverId}}/availability?available=true"
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Estimate Fare",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{fareUrl}}/api/fares/estimate",
+              "host": [
+                "{{fareUrl}}/api/fares/estimate"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pickupLocation\": \"Colombo\", \"destinationLocation\": \"Galle\", \"distanceKm\": 120.0, \"durationMin\": 120, \"vehicleType\": \"Car\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Request Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.environment.set(\"rideId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides",
+              "host": [
+                "{{rideUrl}}/api/rides"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"passengerName\": \"Pass\", \"pickup\": \"Colombo\", \"destination\": \"Galle\", \"distance\": 120.0, \"duration\": 120, \"fare\": 12000.0, \"vehicleType\": \"Car\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "8. Accept Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides/{{rideId}}/accept",
+              "host": [
+                "{{rideUrl}}/api/rides/{{rideId}}/accept"
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "9. Start Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides/{{rideId}}/start",
+              "host": [
+                "{{rideUrl}}/api/rides/{{rideId}}/start"
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "10. Complete Ride",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides/{{rideId}}/complete",
+              "host": [
+                "{{rideUrl}}/api/rides/{{rideId}}/complete"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"distanceKm\": 120.0, \"durationMin\": 120}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11. Pay (Valid Card)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.environment.set(\"paymentId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{fareUrl}}/api/payments",
+              "host": [
+                "{{fareUrl}}/api/payments"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"rideId\": \"{{rideId}}\", \"paymentMethod\": \"CARD\", \"cardLast4\": \"1234\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "12. Get Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{fareUrl}}/api/payments/{{paymentId}}/receipt",
+              "host": [
+                "{{fareUrl}}/api/payments/{{paymentId}}/receipt"
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negatives",
+      "item": [
+        {
+          "name": "No driver (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides",
+              "host": [
+                "{{rideUrl}}/api/rides"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"passengerName\": \"Pass\", \"pickup\": \"Colombo\", \"destination\": \"Galle\", \"distance\": 120.0, \"duration\": 120, \"fare\": 12000.0, \"vehicleType\": \"Van\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid transition (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 409\", function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides/{{rideId}}/start",
+              "host": [
+                "{{rideUrl}}/api/rides/{{rideId}}/start"
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "No token (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 401\", function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides/{{rideId}}/accept",
+              "host": [
+                "{{rideUrl}}/api/rides/{{rideId}}/accept"
+              ]
+            },
+            "header": []
+          }
+        },
+        {
+          "name": "Wrong role (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 403\", function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides",
+              "host": [
+                "{{rideUrl}}/api/rides"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"passengerName\": \"Pass\", \"pickup\": \"A\", \"destination\": \"B\", \"distance\": 1, \"duration\": 1, \"fare\": 100, \"vehicleType\": \"Car\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{driverToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid input (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 400\", function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{accountUrl}}/api/auth/login",
+              "host": [
+                "{{accountUrl}}/api/auth/login"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"notanemail\", \"password\": \"1\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Failed payment (402)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 402\", function () { pm.response.to.have.status(402); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{fareUrl}}/api/payments",
+              "host": [
+                "{{fareUrl}}/api/payments"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"rideId\": \"{{rideId}}\", \"paymentMethod\": \"CARD\", \"cardLast4\": \"0000\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Driver Service down (503)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 503\", function () { pm.response.to.have.status(503); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{rideUrl}}/api/rides",
+              "host": [
+                "{{rideUrl}}/api/rides"
+              ]
+            },
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"passengerName\": \"Pass\", \"pickup\": \"A\", \"destination\": \"B\", \"distance\": 1, \"duration\": 1, \"fare\": 100, \"vehicleType\": \"Car\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{passengerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
