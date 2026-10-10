@@ -21,6 +21,9 @@ public class FinalFareRequest {
     @Positive(message = "durationMin must be positive")
     private Double durationMin;
 
+    @NotBlank(message = "Vehicle type is required")
+    private String vehicleType;
+
     public String getRideId() {
         return rideId;
     }
@@ -51,5 +54,13 @@ public class FinalFareRequest {
 
     public void setDurationMin(Double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 }

@@ -1,15 +1,37 @@
-# IDE / Editor files
-.idea/
-*.iml
+# Applies repo-wide, on top of each service's own .gitignore (which only
+# covers its own subtree) - this catches IDE project folders that sit one
+# level above each service's Maven root (e.g. account-service/.idea/),
+# which the per-service .gitignore files can never reach.
+
+# Build output
+target/
+*.class
 
 # Node / Next.js build output
 node_modules/
 .next/
+*.tsbuildinfo
 
-# Environment files
-.env.local
-.env.development.local
-.env.production.local
+# Secrets / local overrides - none of these should ever be committed
+.env
+.env.*
+!.env.example
+application-local.properties
+application-*-local.properties
 
-# Runtime logs and PID files
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime logs + PID files written by scripts/start-all.sh
 logs/

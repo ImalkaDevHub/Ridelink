@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #FFFFFF;
+  --surface: #FAFAF7;
+  --card: #FAFAF7;
+  --card-text: #111111;
+  --line: #E8E8E8;
+  --accent: #FFC400;
+  --text: #111111;
+  --muted: #666666;
+  --font-heading: var(--font-poppins), "Poppins", system-ui, sans-serif;
+  --font-body: var(--font-poppins), "Poppins", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--text);
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  font-family: var(--font-heading);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes rl-draw {
+  from {
+    stroke-dashoffset: 1400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.mobile-only {
+  display: block;
+}
+.desktop-only {
+  display: none !important;
+}
+
+@media (min-width: 640px) {
+  .mobile-only {
+    display: none !important;
+  }
+  .desktop-only {
+    display: flex !important;
+  }
+}
+
+.login-grid {
+  background-image: url("/image/bike.webp");
+  background-size: cover;
+  background-position: center;
+}
+.login-left-panel {
+  display: none !important;
+}
+.login-right-panel {
+  background: transparent;
+}
+.login-form-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 32px 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  backdrop-filter: blur(8px);
+}
+
+.hero-text-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(4px);
+  padding: 16px 20px;
+  border-radius: 12px;
+}
+
+.hero-bg {
+  background-image: url("/image/im1.webp");
+  background-size: cover;
+  background-position: center bottom;
+}
+
+@media (min-width: 640px) {
+  .login-grid {
+    background-image: none;
+  }
+  .login-left-panel {
+    display: flex !important;
+    background-image: url("/image/bike.webp");
+    background-size: cover;
+    background-position: center;
+  }
+  .login-right-panel {
+    background: var(--card);
+  }
+  .login-form-card {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .hero-bg {
+    background-position: center;
+  }
+}

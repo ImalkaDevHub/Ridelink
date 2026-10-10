@@ -1,17 +1,21 @@
 package com.ridelink.fare_payment_service.util;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.ridelink.fare_payment_service.config.FareProperties;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Locale;
 
-// Single source of truth for the fare formula, reused by both the estimate
-// and final-calculation flows:
+// Single source of truth for the fare rule, reused by estimates, final
+// fares and payments:
 //
-//   finalFare = baseFare + (perKm * distanceKm) + (perMin * durationMin)
+//   fare = max(minimumFare, baseFare + perKm * distanceKm + perMin * durationMin)
+//          * multiplier[vehicleType]
 //
-// rounded to 2 decimal places. Rates are configured via
-// fare.base-fare / fare.per-km / fare.per-min in application.properties.
+// All money is BigDecimal (LKR) and the total is rounded to 2 decimal
+// places, HALF_UP. Rates and multipliers come from the fare.* properties
+// (see FareProperties / application.properties).
 //
 // Constructor injection (rather than this project's usual field @Autowired)
 // is used deliberately so the formula can be unit tested with plain
@@ -19,49 +23,75 @@ import java.util.Locale;
 @Component
 public class FareCalculator {
 
-    private final double baseFare;
-    private final double perKm;
-    private final double perMin;
+    private static final BigDecimal LEGACY_DEFAULT_MULTIPLIER = BigDecimal.ONE;
 
-    public FareCalculator(
-            @Value("${fare.base-fare}") double baseFare,
-            @Value("${fare.per-km}") double perKm,
-            @Value("${fare.per-min}") double perMin) {
-        this.baseFare = baseFare;
-        this.perKm = perKm;
-        this.perMin = perMin;
+    private final FareProperties properties;
+
+    public FareCalculator(FareProperties properties) {
+        this.properties = properties;
     }
 
-    public double calculate(double distanceKm, double durationMin) {
-        if (distanceKm <= 0 || durationMin <= 0) {
-            throw new IllegalArgumentException("distanceKm and durationMin must both be positive");
+    // Strict: unknown vehicle types are rejected.
+    public FareBreakdown calculate(BigDecimal distanceKm, BigDecimal durationMin, String vehicleType) {
+        BigDecimal multiplier = properties.multiplierFor(vehicleType)
+                .orElseThrow(() -> new InvalidVehicleTypeException(
+                        "vehicleType must be one of " + String.join(", ", supportedVehicleTypes())));
+        return calculate(distanceKm, durationMin, vehicleType, multiplier);
+    }
+
+    // Lenient: unknown vehicle types use multiplier 1.0. Only for the legacy
+    // POST /api/payments/finalize call, which accepted any vehicle type.
+    public FareBreakdown calculateLenient(BigDecimal distanceKm, BigDecimal durationMin, String vehicleType) {
+        BigDecimal multiplier = properties.multiplierFor(vehicleType).orElse(LEGACY_DEFAULT_MULTIPLIER);
+        return calculate(distanceKm, durationMin, vehicleType, multiplier);
+    }
+
+    public boolean isSupported(String vehicleType) {
+        return properties.multiplierFor(vehicleType).isPresent();
+    }
+
+    public java.util.List<String> supportedVehicleTypes() {
+        return properties.getMultipliers().keySet().stream()
+                .map(key -> key.toUpperCase(Locale.ROOT))
+                .toList();
+    }
+
+    private FareBreakdown calculate(BigDecimal distanceKm, BigDecimal durationMin, String vehicleType,
+                                    BigDecimal multiplier) {
+        if (distanceKm == null || distanceKm.signum() <= 0) {
+            throw new IllegalArgumentException("distanceKm must be positive");
+        }
+        if (durationMin == null || durationMin.signum() < 0) {
+            throw new IllegalArgumentException("durationMin must not be negative");
         }
 
-        double fare = baseFare + (perKm * distanceKm) + (perMin * durationMin);
-        return Math.round(fare * 100.0) / 100.0;
+        BigDecimal distanceCharge = properties.getPerKm().multiply(distanceKm);
+        BigDecimal timeCharge = properties.getPerMin().multiply(durationMin);
+        BigDecimal subtotal = properties.getBaseFare().add(distanceCharge).add(timeCharge);
+        boolean minimumApplied = subtotal.compareTo(properties.getMinimumFare()) < 0;
+        BigDecimal charged = minimumApplied ? properties.getMinimumFare() : subtotal;
+        BigDecimal total = charged.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
+
+        return new FareBreakdown(
+                vehicleType == null ? null : vehicleType.trim().toUpperCase(Locale.ROOT),
+                distanceKm,
+                durationMin,
+                properties.getBaseFare(),
+                properties.getPerKm(),
+                properties.getPerMin(),
+                distanceCharge.setScale(2, RoundingMode.HALF_UP),
+                timeCharge.setScale(2, RoundingMode.HALF_UP),
+                subtotal.setScale(2, RoundingMode.HALF_UP),
+                properties.getMinimumFare(),
+                minimumApplied,
+                multiplier,
+                total,
+                properties.getCurrency());
     }
 
-    // Human-readable statement of the formula as applied to a specific trip,
-    // used on receipts so the calculation is fully traceable.
-    public String describeBreakdown(double distanceKm, double durationMin) {
-        double fare = calculate(distanceKm, durationMin);
-        return String.format(Locale.ROOT,
-                "%.2f (base) + %.2f (%.2f/km x %.2f km) + %.2f (%.2f/min x %.2f min) = %.2f",
-                baseFare,
-                perKm * distanceKm, perKm, distanceKm,
-                perMin * durationMin, perMin, durationMin,
-                fare);
-    }
-
-    public double getBaseFare() {
-        return baseFare;
-    }
-
-    public double getPerKm() {
-        return perKm;
-    }
-
-    public double getPerMin() {
-        return perMin;
+    public static class InvalidVehicleTypeException extends RuntimeException {
+        public InvalidVehicleTypeException(String message) {
+            super(message);
+        }
     }
 }

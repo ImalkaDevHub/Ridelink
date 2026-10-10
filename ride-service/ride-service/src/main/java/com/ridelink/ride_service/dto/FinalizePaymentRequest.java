@@ -7,12 +7,14 @@ public class FinalizePaymentRequest {
     private String passengerId;
     private Double distanceKm;
     private Double durationMin;
+    private String vehicleType;
 
-    public FinalizePaymentRequest(String rideId, String passengerId, Double distanceKm, Double durationMin) {
+    public FinalizePaymentRequest(String rideId, String passengerId, Double distanceKm, Double durationMin, String vehicleType) {
         this.rideId = rideId;
         this.passengerId = passengerId;
         this.distanceKm = distanceKm;
         this.durationMin = durationMin;
+        this.vehicleType = vehicleType;
     }
 
     public String getRideId() {
@@ -45,5 +47,13 @@ public class FinalizePaymentRequest {
 
     public void setDurationMin(Double durationMin) {
         this.durationMin = durationMin;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
     }
 }

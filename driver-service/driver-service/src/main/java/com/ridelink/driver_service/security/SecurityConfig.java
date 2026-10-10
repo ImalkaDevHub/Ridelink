@@ -1,7 +1,9 @@
 package com.ridelink.driver_service.security;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -12,10 +14,14 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 // No PasswordEncoder bean here - this service never handles passwords, it
@@ -28,29 +34,63 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
+    // JwtAuthFilter is a @Component, so Spring Boot would also register it
+    // as a standalone servlet filter. That copy can run before the security
+    // chain, mark itself as done, and leave the chain's own copy skipped
+    // with the authentication lost. Run it only inside the security chain.
+    @Bean
+    public FilterRegistrationBean<JwtAuthFilter> jwtAuthFilterRegistration(JwtAuthFilter filter) {
+        FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    // Allows the Next.js frontend (a different origin - localhost:3000 -
+    // from every backend service's own port) to call this API directly
+    // from the browser. Without this, the browser blocks the response
+    // before JavaScript ever sees it, even though curl/Postman work fine.
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://ridelink-ten.vercel.app"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        // ride-service's DriverClient calls this with no Authorization
-                        // header today to find a driver to assign - kept open so that
-                        // existing interservice call keeps working. Follow-up: give
-                        // ride-service a service-level credential instead of leaving
-                        // this permanently anonymous.
-                        .requestMatchers(HttpMethod.GET, "/api/drivers/available").permitAll()
-                        // Dual-purpose endpoint: ride-service's DriverClient also PATCHes
-                        // this with no token to reserve a driver on ride assignment, while
-                        // a driver toggling their own availability should require the
-                        // DRIVER role. Left open at the URL level so the anonymous
-                        // interservice call keeps working; the role check is enforced by
-                        // @PreAuthorize("isAnonymous() or hasAuthority('DRIVER')") on
-                        // DriverController.setAvailability instead, which still rejects a
-                        // PASSENGER-role token.
-                        .requestMatchers(HttpMethod.PATCH, "/api/drivers/*/availability").permitAll()
+                        // Without this, an uncaught exception (malformed JSON, a 404 for
+                        // an unmapped path, ...) triggers Spring Boot's internal forward
+                        // to /error, which /this/ security chain would otherwise treat as
+                        // just another unauthenticated request and reject with 401 -
+                        // masking the real status code and error body entirely.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        // /available and /{id}/availability used to be open because
+                        // ride-service called them without a token. Ride-service now
+                        // uses the authenticated /reserve and /release (forwarding the
+                        // caller's token), so every /api/drivers/** endpoint requires
+                        // authentication; per-endpoint roles are on DriverController.
+                        //
+                        // Swagger UI and its raw OpenAPI document - the brief names
+                        // Swagger UI as an official demo interface, so it can't itself
+                        // require a token to load.
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // Health probe for scripts/monitoring (once actuator is added).
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling
                         .authenticationEntryPoint((request, response, authException) ->
