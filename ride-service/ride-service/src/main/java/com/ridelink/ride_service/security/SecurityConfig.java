@@ -3,8 +3,10 @@ package com.ridelink.ride_service.security;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -31,6 +33,17 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
+
+    // JwtAuthFilter is a @Component, so Spring Boot would also register it
+    // as a standalone servlet filter. That copy can run before the security
+    // chain, mark itself as done, and leave the chain's own copy skipped
+    // with the authentication lost. Run it only inside the security chain.
+    @Bean
+    public FilterRegistrationBean<JwtAuthFilter> jwtAuthFilterRegistration(JwtAuthFilter filter) {
+        FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
 
     // Allows the Next.js frontend (a different origin - localhost:3000 -
     // from every backend service's own port) to call this API directly
@@ -73,6 +86,8 @@ public class SecurityConfig {
                         // Swagger UI as an official demo interface, so it can't itself
                         // require a token to load.
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        // Health probe for scripts/monitoring (once actuator is added).
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling

@@ -79,14 +79,16 @@ public class RideService {
         ride.setDriverId(driver.getId());
         ride.setDriverAccountId(driver.getAccountId());
 
-        // Second interservice call. Best effort: null when Fare is down.
+        // Second interservice call (forwarding the caller's token). Best
+        // effort: null when Fare is down.
         ride.setEstimatedFare(fareClient.estimateFare(new FareEstimateRequest(
                 ride.getPickup(), ride.getDestination(),
                 ride.getDistanceKm() != null ? ride.getDistanceKm() : ride.getDistance(),
                 ride.getDurationMin() != null ? ride.getDurationMin()
                         : ride.getDuration() != null ? ride.getDuration().doubleValue() : null,
                 ride.getVehicleType(),
-                ride.getPickupLat(), ride.getPickupLng(), ride.getDestinationLat(), ride.getDestinationLng())));
+                ride.getPickupLat(), ride.getPickupLng(), ride.getDestinationLat(), ride.getDestinationLng()),
+                authorizationHeader));
 
         try {
             return rideRepository.save(ride);
@@ -97,19 +99,20 @@ public class RideService {
         }
     }
 
+    // Participants only: the ride's passenger, its assigned driver, or an
+    // ADMIN.
     public Ride getRide(String id) {
         Ride ride = findOrThrow(id);
         Caller caller = currentCaller();
-        // Passengers see only their own rides; drivers may look rides up
-        // (older rides don't record which account the driver has).
-        if (caller.isPassenger() && !caller.id().equals(ride.getPassengerId())) {
-            throw new NotRideParticipantException("This ride belongs to another passenger.");
+        if (!caller.isAdmin() && !isParticipant(ride, caller)) {
+            throw new NotRideParticipantException("Only the ride's passenger or driver can view it.");
         }
         return ride;
     }
 
-    // History. Passengers may only list their own rides. Without filters,
-    // callers get their own rides (ADMIN: all rides).
+    // History. Passengers may only list their own rides; drivers only see
+    // rides assigned to them. Without filters, callers get their own rides
+    // (ADMIN: all rides).
     public List<Ride> findRides(String passengerId, String driverId, String status) {
         Caller caller = currentCaller();
         RideStatus statusFilter = parseStatus(status);
@@ -136,24 +139,24 @@ public class RideService {
             rides = rideRepository.findByPassengerIdOrderByIdDesc(caller.id());
         }
 
-        if (statusFilter == null) {
-            return rides;
-        }
-        return rides.stream().filter(ride -> ride.getStatus() == statusFilter).toList();
+        return rides.stream()
+                .filter(ride -> caller.isAdmin() || isParticipant(ride, caller))
+                .filter(ride -> statusFilter == null || ride.getStatus() == statusFilter)
+                .toList();
     }
 
-    // ASSIGNED -> ACCEPTED, by the assigned driver (or an ADMIN).
+    // ASSIGNED -> ACCEPTED, by the assigned driver only.
     public Ride acceptRide(String id) {
         Ride ride = findOrThrow(id);
-        requireAssignedDriverOrAdmin(ride);
+        requireAssignedDriver(ride);
         transition(ride, RideStatus.ACCEPTED);
         return rideRepository.save(ride);
     }
 
-    // ACCEPTED -> IN_PROGRESS, by the assigned driver (or an ADMIN).
+    // ACCEPTED -> IN_PROGRESS, by the assigned driver only.
     public Ride startRide(String id) {
         Ride ride = findOrThrow(id);
-        requireAssignedDriverOrAdmin(ride);
+        requireAssignedDriver(ride);
         transition(ride, RideStatus.IN_PROGRESS);
         return rideRepository.save(ride);
     }
@@ -270,6 +273,17 @@ public class RideService {
                 .orElseThrow(() -> new RideNotFoundException("Ride not found with id: " + id));
     }
 
+    private void requireAssignedDriver(Ride ride) {
+        if (!isAssignedDriver(ride, currentCaller())) {
+            throw new NotRideParticipantException("Only the driver assigned to this ride can do this.");
+        }
+    }
+
+    private boolean isParticipant(Ride ride, Caller caller) {
+        return (caller.id() != null && caller.id().equals(ride.getPassengerId())) || isAssignedDriver(ride, caller);
+    }
+
+    // /complete keeps ADMIN as well: the original endpoint allowed it.
     private void requireAssignedDriverOrAdmin(Ride ride) {
         Caller caller = currentCaller();
         if (!caller.isAdmin() && !isAssignedDriver(ride, caller)) {

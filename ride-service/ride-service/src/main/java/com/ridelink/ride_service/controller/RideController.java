@@ -25,10 +25,13 @@ public class RideController {
     @Autowired
     private RideService rideService;
 
+    // passengerId always comes from the token.
     @PostMapping
+    @PreAuthorize("hasAuthority('PASSENGER')")
     @ApiResponse(responseCode = "201", description = "Ride created and a driver assigned (status ASSIGNED)",
             content = @Content(schema = @Schema(implementation = Ride.class)))
     @ApiResponse(responseCode = "400", description = "Validation failed or malformed JSON")
+    @ApiResponse(responseCode = "403", description = "Caller is not a PASSENGER")
     @ApiResponse(responseCode = "409", description = "No driver is available right now")
     @ApiResponse(responseCode = "503", description = "Driver Service is unreachable")
     public ResponseEntity<Ride> requestRide(@Valid @RequestBody Ride ride) {
@@ -38,7 +41,7 @@ public class RideController {
     @GetMapping("/{id}")
     @ApiResponse(responseCode = "200", description = "Ride found",
             content = @Content(schema = @Schema(implementation = Ride.class)))
-    @ApiResponse(responseCode = "403", description = "The ride belongs to another passenger")
+    @ApiResponse(responseCode = "403", description = "Caller is not the ride's passenger, its driver or an ADMIN")
     @ApiResponse(responseCode = "404", description = "No ride with this id")
     public ResponseEntity<Ride> getRide(@PathVariable String id) {
         return ResponseEntity.ok(rideService.getRide(id));
@@ -56,7 +59,7 @@ public class RideController {
     }
 
     @PatchMapping("/{id}/accept")
-    @PreAuthorize("hasAuthority('DRIVER') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('DRIVER')")
     @ApiResponse(responseCode = "200", description = "Ride accepted (ASSIGNED -> ACCEPTED)",
             content = @Content(schema = @Schema(implementation = Ride.class)))
     @ApiResponse(responseCode = "403", description = "Caller is not the assigned driver")
@@ -67,7 +70,7 @@ public class RideController {
     }
 
     @PatchMapping("/{id}/start")
-    @PreAuthorize("hasAuthority('DRIVER') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('DRIVER')")
     @ApiResponse(responseCode = "200", description = "Ride started (ACCEPTED -> IN_PROGRESS)",
             content = @Content(schema = @Schema(implementation = Ride.class)))
     @ApiResponse(responseCode = "403", description = "Caller is not the assigned driver")

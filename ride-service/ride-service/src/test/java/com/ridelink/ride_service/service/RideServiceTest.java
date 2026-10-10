@@ -120,7 +120,7 @@ class RideServiceTest {
     @Test
     void requestRide_reservesADriverAtomicallyAndStoresDriverAndAccountIds() {
         when(driverClient.reserveDriver("Car", TOKEN)).thenReturn(reservedDriver());
-        when(fareClient.estimateFare(any())).thenReturn(new BigDecimal("1020.00"));
+        when(fareClient.estimateFare(any(), any())).thenReturn(new BigDecimal("1020.00"));
 
         Ride result = rideService.requestRide(newRequest());
 
@@ -132,7 +132,7 @@ class RideServiceTest {
         assertThat(result.getRequestedAt()).isNotNull();
 
         ArgumentCaptor<FareEstimateRequest> estimate = ArgumentCaptor.forClass(FareEstimateRequest.class);
-        verify(fareClient).estimateFare(estimate.capture());
+        verify(fareClient).estimateFare(estimate.capture(), eq(TOKEN)); // caller token forwarded
         assertThat(estimate.getValue().distanceKm()).isEqualTo(5.0);   // legacy "distance" field
         assertThat(estimate.getValue().durationMin()).isEqualTo(12.0); // legacy "duration" field
     }
@@ -179,7 +179,7 @@ class RideServiceTest {
     @Test
     void requestRide_whenFareServiceIsDown_stillCreatesTheRideWithNoEstimate() {
         when(driverClient.reserveDriver(any(), any())).thenReturn(reservedDriver());
-        when(fareClient.estimateFare(any())).thenReturn(null); // FareClient swallows the failure
+        when(fareClient.estimateFare(any(), any())).thenReturn(null); // FareClient swallows the failure
 
         Ride result = rideService.requestRide(newRequest());
 
@@ -485,10 +485,64 @@ class RideServiceTest {
     }
 
     @Test
+    void getRide_byAnUnassignedDriver_isForbidden() {
+        authenticateAs("driver-acc-99", "DRIVER");
+        storedRide(RideStatus.ASSIGNED);
+
+        assertThatThrownBy(() -> rideService.getRide("ride-1"))
+                .isInstanceOf(RideService.NotRideParticipantException.class);
+    }
+
+    @Test
+    void getRide_byParticipantsAndAdmin_isAllowed() {
+        storedRide(RideStatus.ASSIGNED);
+        assertThat(rideService.getRide("ride-1").getId()).isEqualTo("ride-1"); // passenger-1
+
+        authenticateAs("driver-acc-7", "DRIVER");
+        assertThat(rideService.getRide("ride-1").getId()).isEqualTo("ride-1");
+
+        authenticateAs("admin-1", "ADMIN");
+        assertThat(rideService.getRide("ride-1").getId()).isEqualTo("ride-1");
+    }
+
+    @Test
+    void accept_byAdmin_isForbidden_onlyTheAssignedDriverMayAccept() {
+        authenticateAs("admin-1", "ADMIN");
+        storedRide(RideStatus.ASSIGNED);
+
+        assertThatThrownBy(() -> rideService.acceptRide("ride-1"))
+                .isInstanceOf(RideService.NotRideParticipantException.class);
+    }
+
+    @Test
+    void complete_byAdmin_isStillAllowed_asInTheOriginalApi() {
+        authenticateAs("admin-1", "ADMIN");
+        storedRide(RideStatus.IN_PROGRESS);
+        when(fareClient.finalizeFare(any(), any())).thenReturn(new BigDecimal("1020.00"));
+
+        assertThat(rideService.completeRide("ride-1", 5.0, 12.0).getStatus()).isEqualTo(RideStatus.COMPLETED);
+    }
+
+    @Test
+    void findRides_byDriverId_onlyReturnsRidesAssignedToTheCaller() {
+        authenticateAs("driver-acc-7", "DRIVER");
+        Ride mine = new Ride();
+        mine.setDriverAccountId("driver-acc-7");
+        Ride legacy = new Ride(); // no driverAccountId recorded
+        Ride someoneElses = new Ride();
+        someoneElses.setDriverAccountId("driver-acc-99");
+        when(rideRepository.findByDriverIdOrderByIdDesc("driver-7")).thenReturn(List.of(mine, legacy, someoneElses));
+
+        assertThat(rideService.findRides(null, "driver-7", null)).containsExactly(mine, legacy);
+    }
+
+    @Test
     void findRides_filtersByStatus() {
         Ride assigned = new Ride();
+        assigned.setPassengerId("passenger-1");
         assigned.setStatus(RideStatus.ASSIGNED);
         Ride done = new Ride();
+        done.setPassengerId("passenger-1");
         done.setStatus(RideStatus.COMPLETED);
         when(rideRepository.findByPassengerIdOrderByIdDesc("passenger-1")).thenReturn(List.of(assigned, done));
 
