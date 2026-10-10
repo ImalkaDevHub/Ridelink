@@ -158,7 +158,20 @@ NEXT_PUBLIC_DRIVER_API_URL=http://localhost:8082
 NEXT_PUBLIC_RIDE_API_URL=http://localhost:8083
 NEXT_PUBLIC_FARE_API_URL=http://localhost:8084
 ```
- 
+
+### Running the project with scripts
+
+Bash scripts in `scripts/` run the four services and the frontend locally, without Docker. They work in Git Bash on Windows, Linux and macOS. Start MongoDB first, for example with `docker compose up -d mongodb`.
+
+```bash
+./scripts/start-all.sh            # start everything in dependency order, waiting for each port
+./scripts/health-check.sh         # one-shot UP/DOWN table (exit 1 if anything is down)
+./scripts/health-check.sh --watch # live dashboard, alerts on UP/DOWN changes (--interval N)
+./scripts/stop-all.sh             # stop all five components and free their ports
+```
+
+Output from each component goes to `logs/<service>.log`. Ports, folders and start order are set in `scripts/config.sh`.
+
 ### 📚 Swagger UI
  
 Once a service is running, its live API docs are at:
