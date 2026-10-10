@@ -304,10 +304,11 @@ class PaymentServiceTest {
         paid.setStatus(PaymentStatus.PAID);
         paid.setCompletedAt(Instant.parse("2026-10-10T08:00:00Z"));
         paid.setReceiptNumber("RL-20261010-ABC123");
+        paid.setPayerId("p-1");
         when(paymentRepository.findById("pay-000abc123")).thenReturn(Optional.of(paid));
         when(fareRecordRepository.findById("fare-1")).thenReturn(Optional.of(fare("p-1")));
 
-        var receipt = paymentService.getReceipt("pay-000abc123");
+        var receipt = paymentService.getReceipt("pay-000abc123", "p-1", false); // the payer
 
         assertThat(receipt.receiptNumber()).isEqualTo("RL-20261010-ABC123");
         assertThat(receipt.method()).isEqualTo("CARD");
@@ -328,7 +329,7 @@ class PaymentServiceTest {
         when(paymentRepository.findById("ride-legacy")).thenReturn(Optional.empty());
         when(paymentRepository.findFirstByRideIdAndStatusIn(eq("ride-legacy"), any())).thenReturn(Optional.of(legacy));
 
-        var receipt = paymentService.getReceipt("ride-legacy");
+        var receipt = paymentService.getReceipt("ride-legacy", "admin-1", true);
 
         assertThat(receipt.rideId()).isEqualTo("ride-legacy");
         assertThat(receipt.receiptNumber()).isEqualTo("RL-20260928-4446CF");
@@ -344,7 +345,54 @@ class PaymentServiceTest {
         failed.setStatus(PaymentStatus.FAILED);
         when(paymentRepository.findById(anyString())).thenReturn(Optional.of(failed));
 
-        assertThatThrownBy(() -> paymentService.getReceipt("pay-1"))
+        assertThatThrownBy(() -> paymentService.getReceipt("pay-1", "admin-1", true))
                 .isInstanceOf(PaymentService.PaymentNotFoundException.class);
+    }
+
+    // --- receipt ownership ------------------------------------------------
+
+    private Payment paidPayment(String payerId, String passengerId) {
+        Payment paid = new Payment();
+        paid.setId("pay-9");
+        paid.setRideId("ride-9");
+        paid.setPayerId(payerId);
+        paid.setPassengerId(passengerId);
+        paid.setFinalFare(new BigDecimal("500.00"));
+        paid.setStatus(PaymentStatus.PAID);
+        paid.setCompletedAt(Instant.parse("2026-10-10T08:00:00Z"));
+        when(paymentRepository.findById("pay-9")).thenReturn(Optional.of(paid));
+        return paid;
+    }
+
+    @Test
+    void receiptIsHiddenFromSomeoneWhoIsNotThePayer() {
+        paidPayment("p-1", "p-1");
+
+        assertThatThrownBy(() -> paymentService.getReceipt("pay-9", "p-2", false))
+                .isInstanceOf(PaymentService.NotPayerException.class);
+    }
+
+    @Test
+    void receiptOwnershipIsCheckedBeforeRevealingWhetherItWasPaid() {
+        paidPayment("p-1", "p-1").setStatus(PaymentStatus.FAILED);
+
+        // A stranger gets 403, not the 404 that would reveal the status.
+        assertThatThrownBy(() -> paymentService.getReceipt("pay-9", "p-2", false))
+                .isInstanceOf(PaymentService.NotPayerException.class);
+    }
+
+    @Test
+    void legacyReceiptIsVisibleToTheRidesPassenger() {
+        // Payments recorded on completion have no payerId - the passenger paid.
+        paidPayment(null, "p-1");
+
+        assertThat(paymentService.getReceipt("pay-9", "p-1", false).paymentId()).isEqualTo("pay-9");
+    }
+
+    @Test
+    void adminSeesAnyReceipt() {
+        paidPayment("p-1", "p-1");
+
+        assertThat(paymentService.getReceipt("pay-9", "admin-1", true).paymentId()).isEqualTo("pay-9");
     }
 }
