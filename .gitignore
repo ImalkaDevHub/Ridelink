@@ -10,6 +10,7 @@ target/
 # Secrets / local overrides - none of these should ever be committed
 .env
 .env.*
+!.env.example
 application-local.properties
 application-*-local.properties
 
