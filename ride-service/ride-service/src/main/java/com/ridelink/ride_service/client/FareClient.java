@@ -32,15 +32,16 @@ public class FareClient {
     @Value("${fare.service.base-url}")
     private String fareServiceBaseUrl;
 
-    // POST /api/fares/estimate (public). Best effort: returns null if Fare
-    // Service is down or can't price the trip, so a ride can still be
-    // created without an estimate.
-    public BigDecimal estimateFare(FareEstimateRequest body) {
+    // POST /api/fares/estimate, forwarding the caller's token (the endpoint
+    // is public today, but the token is sent so tightening it later needs
+    // no change here). Best effort: returns null if Fare Service is down or
+    // can't price the trip, so a ride can still be created without one.
+    public BigDecimal estimateFare(FareEstimateRequest body, String authorizationHeader) {
         try {
             FareEstimateResult result = restTemplate.exchange(
                     fareServiceBaseUrl + "/api/fares/estimate",
                     HttpMethod.POST,
-                    new HttpEntity<>(body, jsonHeaders(null)),
+                    new HttpEntity<>(body, jsonHeaders(authorizationHeader)),
                     FareEstimateResult.class
             ).getBody();
             return result != null ? result.estimatedFare() : null;
