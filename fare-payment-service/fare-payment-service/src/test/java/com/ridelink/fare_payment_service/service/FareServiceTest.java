@@ -164,5 +164,13 @@ class FareServiceTest {
 
         assertThat(result.record().getTotalFare()).isEqualByComparingTo("1020.00");
         assertThat(result.record().getPassengerId()).isEqualTo("p-1");
+    @Test
+    void findFareRecordReturnsOptionalRecord() {
+        FareRecord record = new FareRecord();
+        when(fareRecordRepository.findByRideId("ride-1")).thenReturn(Optional.of(record));
+
+        var result = fareService.findFareRecord("ride-1");
+
+        assertThat(result).isPresent().contains(record);
     }
 }
