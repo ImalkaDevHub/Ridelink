@@ -30,6 +30,10 @@ class DriverServiceTest {
     @Mock
     private DriverRepository driverRepository;
 
+    // Only used by findEligible/reserve/release - see DriverServiceAtomicTest.
+    @Mock
+    private org.springframework.data.mongodb.core.MongoTemplate mongoTemplate;
+
     @InjectMocks
     private DriverService driverService;
 
