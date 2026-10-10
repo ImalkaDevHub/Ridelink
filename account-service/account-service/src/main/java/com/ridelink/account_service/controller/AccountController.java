@@ -3,6 +3,8 @@ package com.ridelink.account_service.controller;
 import com.ridelink.account_service.dto.AccountResponse;
 import com.ridelink.account_service.dto.AuthResponse;
 import com.ridelink.account_service.dto.LoginRequest;
+import com.ridelink.account_service.dto.PagedResponse;
+import com.ridelink.account_service.dto.PasswordChangeRequest;
 import com.ridelink.account_service.dto.ProfileUpdateRequest;
 import com.ridelink.account_service.dto.RegisterRequest;
 import com.ridelink.account_service.service.AccountService;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,6 +25,10 @@ import java.util.Map;
 
 @RestController
 public class AccountController {
+
+    // Owner-or-admin rule for per-account endpoints. The authenticated
+    // principal's name is the caller's account id (see JwtAuthFilter).
+    private static final String OWNER_OR_ADMIN = "hasAuthority('ADMIN') or #id == authentication.name";
 
     @Autowired
     private AccountService accountService;
@@ -46,7 +53,7 @@ public class AccountController {
         try {
             return ResponseEntity.status(HttpStatus.CREATED).body(accountService.register(request));
         } catch (AccountService.EmailAlreadyExistsException e) {
-            return errorResponse(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", e.getMessage());
+            return errorResponse(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", e.getMessage());
         } catch (AccountService.InvalidRoleException e) {
             return errorResponse(HttpStatus.BAD_REQUEST, "INVALID_ROLE", e.getMessage());
         }
@@ -69,9 +76,34 @@ public class AccountController {
         }
     }
 
+    @GetMapping("/api/auth/me")
+    @ApiResponse(responseCode = "200", description = "The caller's own profile",
+            content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "401", description = "No valid access token")
+    @ApiResponse(responseCode = "404", description = "The token's account no longer exists")
+    public ResponseEntity<?> me(Authentication authentication) {
+        try {
+            return ResponseEntity.ok(accountService.getProfile(authentication.getName()));
+        } catch (AccountService.AccountNotFoundException e) {
+            return errorResponse(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/accounts")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @ApiResponse(responseCode = "200", description = "One page of accounts, sorted by id")
+    @ApiResponse(responseCode = "403", description = "Caller does not have the ADMIN authority")
+    public ResponseEntity<PagedResponse<AccountResponse>> listAccounts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(accountService.listAccounts(page, size));
+    }
+
     @GetMapping("/api/accounts/{id}")
+    @PreAuthorize(OWNER_OR_ADMIN)
     @ApiResponse(responseCode = "200", description = "Profile found - never includes the password",
             content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Caller is neither the owner nor an ADMIN")
     @ApiResponse(responseCode = "404", description = "No account with this id")
     public ResponseEntity<?> getProfile(@PathVariable String id) {
         try {
@@ -82,8 +114,10 @@ public class AccountController {
     }
 
     @PatchMapping("/api/accounts/{id}")
+    @PreAuthorize(OWNER_OR_ADMIN)
     @ApiResponse(responseCode = "200", description = "Profile updated",
             content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Caller is neither the owner nor an ADMIN")
     @ApiResponse(responseCode = "404", description = "No account with this id")
     @ApiResponse(responseCode = "409", description = "Email already used by another account")
     public ResponseEntity<?> updateProfile(@PathVariable String id, @Valid @RequestBody ProfileUpdateRequest request) {
@@ -92,7 +126,27 @@ public class AccountController {
         } catch (AccountService.AccountNotFoundException e) {
             return errorResponse(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", e.getMessage());
         } catch (AccountService.EmailAlreadyExistsException e) {
-            return errorResponse(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", e.getMessage());
+            return errorResponse(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", e.getMessage());
+        }
+    }
+
+    // Owner only - not even an ADMIN may change someone else's password.
+    @PatchMapping("/api/accounts/{id}/password")
+    @PreAuthorize("#id == authentication.name")
+    @ApiResponse(responseCode = "200", description = "Password updated")
+    @ApiResponse(responseCode = "400", description = "Validation failed, current password wrong, or new password unchanged")
+    @ApiResponse(responseCode = "403", description = "Caller is not the owner of this account")
+    @ApiResponse(responseCode = "404", description = "No account with this id")
+    public ResponseEntity<?> changePassword(@PathVariable String id, @Valid @RequestBody PasswordChangeRequest request) {
+        try {
+            accountService.changePassword(id, request);
+            return ResponseEntity.ok(Map.of("message", "Password updated"));
+        } catch (AccountService.AccountNotFoundException e) {
+            return errorResponse(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", e.getMessage());
+        } catch (AccountService.WrongPasswordException e) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "WRONG_PASSWORD", e.getMessage());
+        } catch (AccountService.SamePasswordException e) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "SAME_PASSWORD", e.getMessage());
         }
     }
 
@@ -110,6 +164,23 @@ public class AccountController {
             return errorResponse(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", e.getMessage());
         } catch (AccountService.InvalidStatusException e) {
             return errorResponse(HttpStatus.BAD_REQUEST, "INVALID_STATUS", e.getMessage());
+        }
+    }
+
+    @PatchMapping("/api/accounts/{id}/role")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @ApiResponse(responseCode = "200", description = "Role updated",
+            content = @Content(schema = @Schema(implementation = AccountResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Role must be PASSENGER, DRIVER or ADMIN")
+    @ApiResponse(responseCode = "403", description = "Caller does not have the ADMIN authority")
+    @ApiResponse(responseCode = "404", description = "No account with this id")
+    public ResponseEntity<?> setRole(@PathVariable String id, @RequestParam String role) {
+        try {
+            return ResponseEntity.ok(accountService.setRole(id, role));
+        } catch (AccountService.AccountNotFoundException e) {
+            return errorResponse(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", e.getMessage());
+        } catch (AccountService.InvalidRoleException e) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "INVALID_ROLE", e.getMessage());
         }
     }
 

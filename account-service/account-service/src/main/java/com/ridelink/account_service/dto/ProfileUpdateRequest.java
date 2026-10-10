@@ -2,12 +2,14 @@ package com.ridelink.account_service.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 // Profile self-service update: name and email only. Password, role and
 // status are never changed through this endpoint.
 public class ProfileUpdateRequest {
 
     @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 60, message = "Name must be 2-60 characters")
     private String name;
 
     @NotBlank(message = "Email is required")
