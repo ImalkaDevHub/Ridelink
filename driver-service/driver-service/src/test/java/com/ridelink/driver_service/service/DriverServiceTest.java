@@ -89,4 +89,58 @@ class DriverServiceTest {
 
         assertThat(result).containsExactly(available);
     }
+
+    @Test
+    void getAllDrivers_returnsAllDrivers() {
+        Driver d1 = new Driver();
+        Driver d2 = new Driver();
+        when(driverRepository.findAll()).thenReturn(List.of(d1, d2));
+
+        List<Driver> result = driverService.getAllDrivers();
+
+        assertThat(result).containsExactly(d1, d2);
+    }
+
+    @Test
+    void getAvailableDriversByType_returnsMatchingDrivers() {
+        Driver d1 = new Driver();
+        when(driverRepository.findByAvailableTrueAndVehicleTypeIgnoreCase("sedan")).thenReturn(List.of(d1));
+
+        List<Driver> result = driverService.getAvailableDriversByType("sedan");
+
+        assertThat(result).containsExactly(d1);
+    }
+
+    @Test
+    void getDriverByAccountId_whenExists_returnsDriver() {
+        Driver driver = new Driver();
+        driver.setAccountId("acc-1");
+        when(driverRepository.findByAccountId("acc-1")).thenReturn(Optional.of(driver));
+
+        Driver result = driverService.getDriverByAccountId("acc-1");
+
+        assertThat(result).isSameAs(driver);
+    }
+
+    @Test
+    void getDriverByAccountId_whenDoesNotExist_throwsDriverNotFoundException() {
+        when(driverRepository.findByAccountId("acc-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> driverService.getDriverByAccountId("acc-1"))
+                .isInstanceOf(DriverService.DriverNotFoundException.class);
+    }
+
+    @Test
+    void updateServiceArea_updatesAndSavesDriver() {
+        Driver driver = new Driver();
+        driver.setId("1");
+        driver.setServiceArea("Colombo");
+        when(driverRepository.findById("1")).thenReturn(Optional.of(driver));
+        when(driverRepository.save(driver)).thenReturn(driver);
+
+        Driver updated = driverService.updateServiceArea("1", " Malabe ");
+
+        assertThat(updated.getServiceArea()).isEqualTo("Malabe");
+        verify(driverRepository).save(driver);
+    }
 }
