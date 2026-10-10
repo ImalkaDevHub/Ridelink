@@ -3,11 +3,11 @@ package com.ridelink.account_service.dto;
 public class AuthResponse {
 
     private String token;
-    private Long id;
+    private String id;
     private String name;
     private String role;
 
-    public AuthResponse(String token, Long id, String name, String role) {
+    public AuthResponse(String token, String id, String name, String role) {
         this.token = token;
         this.id = id;
         this.name = name;
@@ -22,11 +22,11 @@ public class AuthResponse {
         this.token = token;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

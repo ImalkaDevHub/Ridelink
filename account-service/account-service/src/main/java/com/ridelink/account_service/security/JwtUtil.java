@@ -28,14 +28,16 @@ public class JwtUtil {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
 
+        // sub is the account id. "accountId" is kept as well because the
+        // other three services read the id from that claim.
         return Jwts.builder()
-                .subject(account.getEmail())
+                .subject(account.getId())
                 .claim("accountId", account.getId())
                 .claim("email", account.getEmail())
                 .claim("role", account.getRole().name())
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(signingKey())
+                .signWith(signingKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -57,8 +59,9 @@ public class JwtUtil {
         return parseClaims(token) != null;
     }
 
-    public Long getAccountId(Claims claims) {
-        return claims.get("accountId", Long.class);
+    public String getAccountId(Claims claims) {
+        String accountId = claims.get("accountId", String.class);
+        return accountId != null ? accountId : claims.getSubject();
     }
 
     public String getRole(Claims claims) {

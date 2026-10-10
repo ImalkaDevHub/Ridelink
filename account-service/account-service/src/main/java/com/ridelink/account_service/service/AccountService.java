@@ -3,6 +3,8 @@ package com.ridelink.account_service.service;
 import com.ridelink.account_service.dto.AccountResponse;
 import com.ridelink.account_service.dto.AuthResponse;
 import com.ridelink.account_service.dto.LoginRequest;
+import com.ridelink.account_service.dto.PagedResponse;
+import com.ridelink.account_service.dto.PasswordChangeRequest;
 import com.ridelink.account_service.dto.ProfileUpdateRequest;
 import com.ridelink.account_service.dto.RegisterRequest;
 import com.ridelink.account_service.model.Account;
@@ -11,11 +13,17 @@ import com.ridelink.account_service.model.Status;
 import com.ridelink.account_service.repository.AccountRepository;
 import com.ridelink.account_service.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AccountService {
+
+    public static final int MAX_PAGE_SIZE = 100;
 
     @Autowired
     private AccountRepository accountRepository;
@@ -38,7 +46,7 @@ public class AccountService {
         account.setRole(resolveRegistrationRole(request.getRole()));
         account.setStatus(Status.ACTIVE);
 
-        Account saved = accountRepository.save(account);
+        Account saved = saveUniqueEmail(account);
         String token = jwtUtil.generateToken(saved);
 
         return new AuthResponse(token, saved.getId(), saved.getName(), saved.getRole().name());
@@ -61,11 +69,11 @@ public class AccountService {
         return new AuthResponse(token, account.getId(), account.getName(), account.getRole().name());
     }
 
-    public AccountResponse getProfile(Long id) {
+    public AccountResponse getProfile(String id) {
         return toResponse(findOrThrow(id));
     }
 
-    public AccountResponse updateProfile(Long id, ProfileUpdateRequest request) {
+    public AccountResponse updateProfile(String id, ProfileUpdateRequest request) {
         Account account = findOrThrow(id);
 
         accountRepository.findByEmail(request.getEmail())
@@ -77,10 +85,40 @@ public class AccountService {
         account.setName(request.getName());
         account.setEmail(request.getEmail());
 
-        return toResponse(accountRepository.save(account));
+        return toResponse(saveUniqueEmail(account));
     }
 
-    public AccountResponse setStatus(Long id, String status) {
+    public void changePassword(String id, PasswordChangeRequest request) {
+        Account account = findOrThrow(id);
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
+            throw new WrongPasswordException("Current password is incorrect.");
+        }
+
+        if (passwordEncoder.matches(request.getNewPassword(), account.getPassword())) {
+            throw new SamePasswordException("New password must be different from the current password.");
+        }
+
+        account.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        accountRepository.save(account);
+    }
+
+    public PagedResponse<AccountResponse> listAccounts(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+
+        Page<Account> result = accountRepository.findAll(
+                PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.ASC, "id")));
+
+        return new PagedResponse<>(
+                result.getContent().stream().map(this::toResponse).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
+    }
+
+    public AccountResponse setStatus(String id, String status) {
         Account account = findOrThrow(id);
 
         Status newStatus;
@@ -94,9 +132,35 @@ public class AccountService {
         return toResponse(accountRepository.save(account));
     }
 
-    private Account findOrThrow(Long id) {
+    // Admin-only. Unlike self-registration, any role (including ADMIN) may
+    // be assigned here.
+    public AccountResponse setRole(String id, String role) {
+        Account account = findOrThrow(id);
+
+        Role newRole;
+        try {
+            newRole = Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidRoleException("Role must be one of PASSENGER, DRIVER, ADMIN.");
+        }
+
+        account.setRole(newRole);
+        return toResponse(accountRepository.save(account));
+    }
+
+    private Account findOrThrow(String id) {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException("Account not found with id: " + id));
+    }
+
+    // The findByEmail pre-check gives a clean error in the normal case; the
+    // unique index on email catches two concurrent requests that both pass it.
+    private Account saveUniqueEmail(Account account) {
+        try {
+            return accountRepository.save(account);
+        } catch (DuplicateKeyException e) {
+            throw new EmailAlreadyExistsException("An account with this email already exists.");
+        }
     }
 
     private AccountResponse toResponse(Account account) {
@@ -155,6 +219,18 @@ public class AccountService {
 
     public static class InvalidStatusException extends RuntimeException {
         public InvalidStatusException(String message) {
+            super(message);
+        }
+    }
+
+    public static class WrongPasswordException extends RuntimeException {
+        public WrongPasswordException(String message) {
+            super(message);
+        }
+    }
+
+    public static class SamePasswordException extends RuntimeException {
+        public SamePasswordException(String message) {
             super(message);
         }
     }
