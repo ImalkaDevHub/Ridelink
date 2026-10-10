@@ -1,16 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import NavBar from "@/components/NavBar";
 import { Field, PrimaryButton, Card, ErrorBanner, InfoBanner, StatusBadge } from "@/components/ui";
-import { driverApi, rideApi, ApiError, type Ride } from "@/lib/api";
+import { driverApi, rideApi, ApiError, errorMessage, TERMINAL_STATUSES, type Ride } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { formatDisplayId } from "@/lib/format";
+import { formatMoney } from "@/lib/money";
 
-// useSearchParams() (read below, for the ?newDriverId= redirect after
-// registration) requires a Suspense boundary around anything that calls it,
-// or Next.js can't statically bail out to client rendering for this page.
 export default function DriverPage() {
   return (
     <Suspense fallback={null}>
@@ -19,134 +16,194 @@ export default function DriverPage() {
   );
 }
 
+// The one button shown per status - only transitions ride-service allows
+// for the assigned driver (cancelled/completed rides get none).
+const NEXT_ACTION: Record<string, { label: string; action: "accept" | "start" | "complete" } | null> = {
+  REQUESTED: null,
+  ASSIGNED: { label: "Accept ride", action: "accept" },
+  ACCEPTED: { label: "Start ride", action: "start" },
+  IN_PROGRESS: { label: "Complete ride", action: "complete" },
+};
+
 function DriverDashboard() {
   const { session, ready, updateSession } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [driverProfileId, setDriverProfileId] = useState<string>("");
   const [available, setAvailable] = useState(false);
   const [togglingError, setTogglingError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
-
-  const [rideId, setRideId] = useState("");
-  const [lookedUpRide, setLookedUpRide] = useState<Ride | null>(null);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [completing, setCompleting] = useState(false);
-  const [completeError, setCompleteError] = useState<string | null>(null);
-  const [completedRide, setCompletedRide] = useState<Ride | null>(null);
-  
-  const [driverRides, setDriverRides] = useState<Ride[]>([]);
-  const [dailyEarnings, setDailyEarnings] = useState(0);
-  const [completedRidesCount, setCompletedRidesCount] = useState(0);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (ready && (!session || session.role !== "DRIVER")) router.push("/login");
-  }, [ready, session, router]);
+  const [driverRides, setDriverRides] = useState<Ride[]>([]);
+  const [actionBusy, setActionBusy] = useState<string | null>(null); // rideId being acted on
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Trip figures entered when completing, per ride (pre-filled from the request).
+  const [tripInputs, setTripInputs] = useState<Record<string, { distanceKm: string; durationMin: string }>>({});
 
-  useEffect(() => {
-    if (!session?.driverProfileId || !session?.token) {
-      setDriverRides([]);
-      setDailyEarnings(0);
-      setCompletedRidesCount(0);
-      return;
+  // Location / service area
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [serviceArea, setServiceArea] = useState("");
+  const [locationBusy, setLocationBusy] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationOk, setLocationOk] = useState(false);
+  const [saBusy, setSaBusy] = useState(false);
+  const [saError, setSaError] = useState<string | null>(null);
+  const [saOk, setSaOk] = useState(false);
+
+  // Stats from real ride data - the final fare once known, else the estimate.
+  const completedRides = driverRides.filter(r => r.status === "COMPLETED");
+  const dailyEarnings = completedRides.reduce((s, r) => s + rideFare(r), 0);
+  const completedCount = completedRides.length;
+  const dailyGoal = 10;
+  const progress = Math.min((completedCount / dailyGoal) * 100, 100);
+
+  const profileIdForRides = session?.driverProfileId;
+
+  // Rides and the online flag together: reserving a driver for a ride takes
+  // them offline and completing/cancelling it puts them back online, both on
+  // the server, so the toggle has to follow along.
+  const refreshRides = useCallback(async () => {
+    if (!profileIdForRides) return;
+    try {
+      const [rides, profile] = await Promise.all([rideApi.listByDriver(profileIdForRides), driverApi.getMyProfile()]);
+      setDriverRides(rides);
+      setAvailable(profile.available);
+    } catch {
+      // Polling errors are transient; the next tick retries.
     }
-    rideApi.listByDriver(session.driverProfileId, session.token)
-      .then((rides) => {
-        setDriverRides(rides);
-        const completed = rides.filter((r) => r.status === "COMPLETED");
-        setCompletedRidesCount(completed.length);
-        setDailyEarnings(completed.reduce((sum, r) => sum + Number(r.fare || 0), 0));
-      })
-      .catch(() => {
-        setDriverRides([]);
-        setDailyEarnings(0);
-        setCompletedRidesCount(0);
-      });
-  }, [session?.driverProfileId, session?.token, completedRide]);
+  }, [profileIdForRides]);
 
+  // Load driver profile once
   useEffect(() => {
     if (!ready || !session || session.role !== "DRIVER") return;
-    
-    // Auto-fetch the driver profile linked to this account
     driverApi.getMyProfile(session.token)
       .then((profile) => {
         setProfileError(null);
         setDriverProfileId(String(profile.id));
         setAvailable(profile.available);
+        setServiceArea(profile.serviceArea ?? "");
+        if (profile.currentLat != null) setLat(String(profile.currentLat));
+        if (profile.currentLng != null) setLng(String(profile.currentLng));
         if (session.driverProfileId !== profile.id) {
           updateSession({ driverProfileId: profile.id });
         }
       })
       .catch((e) => {
         if (e instanceof ApiError && e.code === "DRIVER_NOT_FOUND") {
-          setProfileError("No vehicle profile is linked to this account (likely because it was created before the recent update). Please log out and register a completely new driver account.");
+          setProfileError("No vehicle profile found for this account. Log out and register a new driver account.");
         } else {
-          setProfileError(e instanceof ApiError ? e.message : "Could not fetch driver profile. Ensure the Driver Service backend is running.");
+          setProfileError(errorMessage(e, "We couldn't load your driver profile. Please try again."));
         }
       });
-  }, [ready, session?.id, session?.token, updateSession]);
+  }, [ready, session?.id, session?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load now, then poll rides every 4 s
+  useEffect(() => {
+    if (!profileIdForRides) return;
+    const first = setTimeout(refreshRides, 0);
+    const interval = setInterval(refreshRides, 4000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
+  }, [profileIdForRides, refreshRides]);
 
   async function toggleOnline() {
-    if (!session || !session.token) return;
-    const id = driverProfileId;
-    if (!id) {
-      setTogglingError("Could not determine your Driver Profile ID. Please try refreshing.");
-      return;
-    }
+    if (!session || !driverProfileId) return;
     setTogglingError(null);
     setToggling(true);
     try {
-      const driver = await driverApi.setAvailability(id, !available, session.token);
+      const driver = await driverApi.setAvailability(driverProfileId, !available, session.token);
       setAvailable(driver.available);
     } catch (e) {
-      setTogglingError(e instanceof ApiError ? e.message : "Could not reach Driver Service.");
+      setTogglingError(errorMessage(e, "We couldn't change your availability. Please try again."));
     } finally {
       setToggling(false);
     }
   }
 
-  async function lookupRide() {
-    if (!session || !rideId) return;
-    setLookupError(null);
-    setCompletedRide(null);
-    setLookedUpRide(null);
+  function tripFor(ride: Ride) {
+    return tripInputs[ride.id] ?? {
+      distanceKm: String(ride.distanceKm ?? ride.distance ?? ""),
+      durationMin: String(ride.durationMin ?? ride.duration ?? ""),
+    };
+  }
+
+  function setTrip(ride: Ride, patch: Partial<{ distanceKm: string; durationMin: string }>) {
+    setTripInputs(prev => ({ ...prev, [ride.id]: { ...tripFor(ride), ...patch } }));
+  }
+
+  async function doRideAction(ride: Ride, action: "accept" | "start" | "complete") {
+    setActionError(null);
+    if (action === "complete") {
+      const trip = tripFor(ride);
+      if (!(Number(trip.distanceKm) > 0) || !(Number(trip.durationMin) > 0)) {
+        setActionError("Enter the trip's distance and duration (both more than 0) to complete the ride.");
+        return;
+      }
+    }
+    setActionBusy(ride.id);
     try {
-      const ride = await rideApi.get(rideId, session.token);
-      console.log("Fetched Ride:", ride);
-      setLookedUpRide(ride);
+      if (action === "accept") await rideApi.accept(ride.id);
+      else if (action === "start") await rideApi.start(ride.id);
+      else {
+        const trip = tripFor(ride);
+        await rideApi.complete(ride.id, { distanceKm: Number(trip.distanceKm), durationMin: Number(trip.durationMin) });
+      }
     } catch (e) {
-      setLookupError(e instanceof ApiError ? e.message : "Could not reach Ride Service.");
+      setActionError(errorMessage(e, "That didn't work. Please try again."));
+    } finally {
+      // Refresh either way so the card shows the ride's real status.
+      await refreshRides();
+      setActionBusy(null);
     }
   }
 
-  async function completeRide() {
-    if (!session || !rideId) return;
-    setCompleteError(null);
-    setCompleting(true);
+  async function updateLocation() {
+    if (!driverProfileId || !lat || !lng) return;
+    setLocationError(null);
+    setLocationOk(false);
+    const latNum = Number(lat);
+    const lngNum = Number(lng);
+    if (!(latNum >= -90 && latNum <= 90) || !(lngNum >= -180 && lngNum <= 180)) {
+      setLocationError("Latitude must be between -90 and 90, and longitude between -180 and 180.");
+      return;
+    }
+    setLocationBusy(true);
     try {
-      const distance = Number(lookedUpRide?.distance || 0);
-      const duration = Number(lookedUpRide?.duration || 0);
-      const ride = await rideApi.complete(rideId, { distanceKm: distance, durationMin: duration }, session.token);
-      setCompletedRide(ride);
-      setLookedUpRide(ride);
+      await driverApi.updateLocation(driverProfileId, { lat: latNum, lng: lngNum });
+      setLocationOk(true);
     } catch (e) {
-      setCompleteError(e instanceof ApiError ? e.message : "Could not reach Ride Service.");
+      setLocationError(errorMessage(e, "We couldn't update your location. Please try again."));
     } finally {
-      setCompleting(false);
+      setLocationBusy(false);
+    }
+  }
+
+  async function updateServiceArea() {
+    if (!driverProfileId || !serviceArea.trim()) return;
+    setSaBusy(true);
+    setSaError(null);
+    setSaOk(false);
+    try {
+      await driverApi.updateServiceArea(driverProfileId, serviceArea.trim());
+      setSaOk(true);
+    } catch (e) {
+      setSaError(errorMessage(e, "We couldn't update your service area. Please try again."));
+    } finally {
+      setSaBusy(false);
     }
   }
 
   if (!ready || !session) return null;
 
-  // Logic to calculate stats from real backend data
-  const dailyGoal = 10;
-  const progressPercentage = Math.min((completedRidesCount / dailyGoal) * 100, 100);
+  const activeRides = driverRides.filter(r => !TERMINAL_STATUSES.has(r.status));
+  const historyRides = driverRides.filter(r => TERMINAL_STATUSES.has(r.status)).slice(0, 10);
 
   return (
     <div style={{ minHeight: "100vh" }}>
-      <NavBar label="Driver Service &middot; 8082" />
+      <NavBar label="Driver Service · 8082" />
 
       {profileError && (
         <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto" }}>
@@ -154,49 +211,37 @@ function DriverDashboard() {
         </div>
       )}
 
-      {/* Driver Stats & Daily Earnings Section */}
+      {/* Stats banner */}
       <div style={{ padding: "28px 32px 0", maxWidth: 1200, margin: "0 auto", display: profileError ? "none" : "block" }}>
-        <div style={{ 
-          background: "linear-gradient(135deg, #FFC400 0%, #F5B800 100%)", 
-          borderRadius: 16, 
-          padding: "28px 32px", 
+        <div style={{
+          background: "linear-gradient(135deg, #FFC400 0%, #F5B800 100%)",
+          borderRadius: 16, padding: "28px 32px",
           boxShadow: "0 10px 25px rgba(255, 196, 0, 0.2)",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 32,
-          alignItems: "center",
-          justifyContent: "space-between",
-          color: "#111111"
+          display: "flex", flexWrap: "wrap", gap: 32,
+          alignItems: "center", justifyContent: "space-between", color: "#111",
         }}>
           <div>
             <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, opacity: 0.8, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Daily Earnings</div>
-            <div style={{ fontFamily: "var(--font-heading)", fontSize: 44, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>LKR {dailyEarnings.toFixed(2)}</div>
-            <div style={{ fontSize: 14.5, opacity: 0.85, marginTop: 10, fontWeight: 500 }}>from {completedRidesCount} completed rides</div>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 44, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>{formatMoney(dailyEarnings)}</div>
+            <div style={{ fontSize: 14.5, opacity: 0.85, marginTop: 10 }}>from {completedCount} completed rides</div>
           </div>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: 24, background: "rgba(255, 255, 255, 0.15)", padding: "16px 24px", borderRadius: 12 }}>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 24, background: "rgba(255,255,255,.15)", padding: "16px 24px", borderRadius: 12 }}>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>Daily Goal</div>
-              <div style={{ fontSize: 14, opacity: 0.9 }}>{completedRidesCount} / {dailyGoal} Rides</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>{completedCount} / {dailyGoal} Rides</div>
             </div>
-            
-            {/* SVG Circular Progress Chart */}
             <div style={{ position: "relative", width: 72, height: 72 }}>
               <svg width="72" height="72" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
-                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(17, 17, 17, 0.15)" strokeWidth="10" />
-                <circle 
-                  cx="50" cy="50" r="40" 
-                  fill="none" 
-                  stroke="#111111" 
-                  strokeWidth="10" 
-                  strokeDasharray={`${2 * Math.PI * 40}`} 
-                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - progressPercentage / 100)}`} 
-                  strokeLinecap="round" 
-                  style={{ transition: "stroke-dashoffset 1s ease-in-out" }}
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(17,17,17,.15)" strokeWidth="10" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#111" strokeWidth="10"
+                  strokeDasharray={`${2 * Math.PI * 40}`}
+                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - progress / 100)}`}
+                  strokeLinecap="round" style={{ transition: "stroke-dashoffset 1s ease-in-out" }}
                 />
               </svg>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>
-                {Math.round(progressPercentage)}%
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-heading)", fontSize: 16, fontWeight: 700 }}>
+                {Math.round(progress)}%
               </div>
             </div>
           </div>
@@ -204,105 +249,137 @@ function DriverDashboard() {
       </div>
 
       <div style={{ display: profileError ? "none" : "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: 24, padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
-        <Card>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
+        {/* Profile card */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Card>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 18 }}>Your driver profile</div>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
+              Account <strong>{formatDisplayId(session.id)}</strong> · Driver <strong>{formatDisplayId(driverProfileId)}</strong>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <span style={{ fontFamily: "var(--font-heading)", fontSize: 13, fontWeight: 600 }}>{available ? "Online" : "Offline"}</span>
+              <button
+                type="button"
+                onClick={toggleOnline}
+                disabled={toggling}
+                aria-pressed={available}
+                style={{
+                  width: 50, height: 28, borderRadius: 999,
+                  border: `1px solid ${available ? "var(--accent)" : "var(--line)"}`,
+                  background: available ? "var(--accent)" : "transparent",
+                  cursor: "pointer", padding: 3,
+                  display: "flex", justifyContent: available ? "flex-end" : "flex-start",
+                }}
+              >
+                <span style={{ width: 20, height: 20, borderRadius: "50%", background: available ? "#14161a" : "#6b7280", display: "block" }} />
+              </button>
+            </div>
+            <ErrorBanner message={togglingError} />
+          </Card>
 
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
-            Automatically linked to Account {formatDisplayId(session?.id)}. Your Driver Profile ID is <strong>{formatDisplayId(driverProfileId)}</strong>.
-          </div>
+          {/* Location update */}
+          <Card>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Update Location</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Field label="Latitude" type="number" step="any" value={lat} onChange={e => setLat(e.target.value)} placeholder="6.9271" />
+              <Field label="Longitude" type="number" step="any" value={lng} onChange={e => setLng(e.target.value)} placeholder="79.8612" />
+            </div>
+            <PrimaryButton onClick={updateLocation} disabled={locationBusy || !lat || !lng}>
+              {locationBusy ? "Saving…" : "Update location"}
+            </PrimaryButton>
+            <ErrorBanner message={locationError} />
+            {locationOk && <p style={{ marginTop: 10, fontSize: 12, color: "#3ddc84" }}>✓ Location updated.</p>}
+          </Card>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-            <span style={{ fontFamily: "var(--font-heading)", fontSize: 13, fontWeight: 600 }}>{available ? "Online" : "Offline"}</span>
-            <button
-              type="button"
-              onClick={toggleOnline}
-              disabled={toggling}
-              aria-pressed={available}
-              style={{
-                width: 50,
-                height: 28,
-                borderRadius: 999,
-                border: `1px solid ${available ? "var(--accent)" : "var(--line)"}`,
-                background: available ? "var(--accent)" : "transparent",
-                cursor: "pointer",
-                padding: 3,
-                display: "flex",
-                justifyContent: available ? "flex-end" : "flex-start",
-              }}
-            >
-              <span style={{ width: 20, height: 20, borderRadius: "50%", background: available ? "#14161a" : "#6b7280", display: "block" }} />
-            </button>
-          </div>
-          <ErrorBanner message={togglingError} />
-        </Card>
+          {/* Service area update */}
+          <Card>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Update Service Area</div>
+            <Field label="Service area" value={serviceArea} onChange={e => setServiceArea(e.target.value)} placeholder="Colombo" />
+            <PrimaryButton onClick={updateServiceArea} disabled={saBusy || !serviceArea.trim()}>
+              {saBusy ? "Saving…" : "Update service area"}
+            </PrimaryButton>
+            <ErrorBanner message={saError} />
+            {saOk && <p style={{ marginTop: 10, fontSize: 12, color: "#3ddc84" }}>✓ Service area updated.</p>}
+          </Card>
+        </div>
 
-        <Card>
-          <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Live Queue (Assigned Rides)</div>
-          
-          {driverRides.filter(r => r.status === "ASSIGNED" || r.status === "IN_PROGRESS").length === 0 ? (
-            <InfoBanner>No active rides assigned to you at the moment. Waiting for requests...</InfoBanner>
-          ) : (
-            <div style={{ display: "grid", gap: 12 }}>
-              {driverRides
-                .filter(r => r.status === "ASSIGNED" || r.status === "IN_PROGRESS")
-                .map(ride => (
-                  <div key={ride.id} style={{ border: `1px solid ${lookedUpRide?.id === ride.id ? "var(--accent)" : "var(--line)"}`, borderRadius: 8, padding: 14, background: lookedUpRide?.id === ride.id ? "rgba(255, 196, 0, 0.03)" : "transparent", transition: "all 0.2s" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>Ride {formatDisplayId(ride.id)}</span>
+        {/* Active rides */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <Card>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>
+              Active Rides ({activeRides.length})
+            </div>
+            <ErrorBanner message={actionError} />
+            {activeRides.length === 0 ? (
+              <InfoBanner>No active rides assigned to you. Go online to receive requests.</InfoBanner>
+            ) : (
+              <div style={{ display: "grid", gap: 12 }}>
+                {activeRides.map(ride => {
+                  const next = NEXT_ACTION[ride.status] ?? null;
+                  const isBusy = actionBusy === ride.id;
+                  return (
+                    <div key={ride.id} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 600 }}>Ride {formatDisplayId(ride.id)}</span>
+                        <StatusBadge status={ride.status} />
+                      </div>
+                      <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 10 }}>
+                        {ride.pickup} → {ride.destination}
+                      </div>
+                      {(ride.distanceKm ?? ride.distance) != null && (
+                        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
+                          {ride.distanceKm ?? ride.distance} km · {ride.durationMin ?? ride.duration} min
+                          {rideFare(ride) > 0 && <> · est. {formatMoney(rideFare(ride))}</>}
+                        </div>
+                      )}
+                      {next?.action === "complete" && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                          <Field label="Distance (km)" type="number" step="0.1" min="0" value={tripFor(ride).distanceKm} onChange={e => setTrip(ride, { distanceKm: e.target.value })} />
+                          <Field label="Duration (min)" type="number" step="1" min="0" value={tripFor(ride).durationMin} onChange={e => setTrip(ride, { durationMin: e.target.value })} />
+                        </div>
+                      )}
+                      {next && (
+                        <PrimaryButton
+                          onClick={() => doRideAction(ride, next.action)}
+                          disabled={isBusy}
+                          style={{ fontSize: 13, padding: "10px 14px" }}
+                        >
+                          {isBusy ? "Please wait…" : next.label}
+                        </PrimaryButton>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          {/* History */}
+          <Card>
+            <div style={{ fontFamily: "var(--font-heading)", fontSize: 15, fontWeight: 600, marginBottom: 14 }}>History</div>
+            {historyRides.length === 0 ? (
+              <InfoBanner>No completed rides yet.</InfoBanner>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {historyRides.map(ride => (
+                  <div key={ride.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
+                    <span style={{ fontSize: 13 }}>{ride.pickup} → {ride.destination}</span>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {ride.status === "COMPLETED" && <span style={{ fontSize: 12, fontWeight: 600 }}>{formatMoney(rideFare(ride))}</span>}
                       <StatusBadge status={ride.status} />
                     </div>
-                    <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
-                      {ride.pickup} &rarr; {ride.destination}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setRideId(String(ride.id)); setLookedUpRide(ride); setCompleteError(null); setCompletedRide(null); }}
-                      style={{
-                        width: "100%",
-                        fontFamily: "var(--font-heading)",
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        background: lookedUpRide?.id === ride.id ? "var(--accent)" : "transparent",
-                        border: `1px solid ${lookedUpRide?.id === ride.id ? "var(--accent)" : "var(--line)"}`,
-                        borderRadius: 6,
-                        padding: "8px",
-                        cursor: "pointer",
-                        color: lookedUpRide?.id === ride.id ? "#111" : "var(--text)",
-                        transition: "all 0.2s"
-                      }}
-                    >
-                      {lookedUpRide?.id === ride.id ? "Currently Viewing" : "View / Complete"}
-                    </button>
                   </div>
                 ))}
-            </div>
-          )}
-
-          {lookedUpRide && (
-            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 18, marginTop: 18 }}>
-              <div style={{ fontFamily: "var(--font-heading)", fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                Completing Ride {formatDisplayId(lookedUpRide.id)}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <Field label="Distance (km)" type="number" step="0.1" value={lookedUpRide.distance ?? ""} disabled onChange={() => {}} />
-                <Field label="Duration (min)" type="number" step="1" value={lookedUpRide.duration ?? ""} disabled onChange={() => {}} />
-                <Field label="Fare (LKR)" type="number" value={lookedUpRide.fare ?? ""} disabled onChange={() => {}} />
-              </div>
-
-              <PrimaryButton onClick={completeRide} disabled={completing || lookedUpRide.status === "COMPLETED"}>
-                {completing ? "Completing..." : lookedUpRide.status === "COMPLETED" ? "Already completed" : "Complete ride"}
-              </PrimaryButton>
-              <ErrorBanner message={completeError} />
-
-              {completedRide && (
-                <p style={{ marginTop: 12, fontSize: 13, color: "var(--muted)" }}>
-                  Marked COMPLETED and a real payment was recorded in Fare &amp; Payment Service.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );
+}
+
+// What a ride earned: the final fare once completed, else the estimate.
+function rideFare(ride: Ride): number {
+  return Number(ride.finalFare ?? ride.estimatedFare ?? ride.fare ?? 0);
 }
