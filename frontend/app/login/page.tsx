@@ -1,23 +1,97 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import NavBar from "@/components/NavBar";
-import { Field, SelectField, PrimaryButton, ErrorBanner } from "@/components/ui";
+import { FieldWithError, SelectField, PrimaryButton, ErrorBanner } from "@/components/ui";
 import { accountApi, driverApi, ApiError, type Role } from "@/lib/api";
+import { PASSWORD_HINT, validateEmail, validateName, validatePassword } from "@/lib/validation";
 import { useAuth } from "@/lib/auth";
 
 type Mode = "login" | "register";
 
+type FieldErrors = Partial<Record<"name" | "email" | "password" | "vehicleNumber" | "vehicleType" | "serviceArea", string>>;
+
+// Same rules as account-service's RegisterRequest, so most mistakes are
+// caught before a round trip.
+function validateRegister(name: string, email: string, password: string): FieldErrors {
+  const errs: FieldErrors = {};
+  const nameError = validateName(name);
+  const emailError = validateEmail(email);
+  const passwordError = validatePassword(password);
+  if (nameError) errs.name = nameError;
+  if (emailError) errs.email = emailError;
+  if (passwordError) errs.password = passwordError;
+  return errs;
+}
+
+// Login doesn't apply the password rule - older accounts may have shorter passwords.
+function validateLogin(email: string, password: string): FieldErrors {
+  const errs: FieldErrors = {};
+  const emailError = validateEmail(email);
+  if (emailError) errs.email = emailError;
+  if (!password) errs.password = "Password is required.";
+  return errs;
+}
+
+function validateDriverProfile(vehicleNumber: string, serviceArea: string): FieldErrors {
+  const errs: FieldErrors = {};
+  const number = vehicleNumber.trim();
+  if (!number) errs.vehicleNumber = "Vehicle number is required.";
+  else if (number.length < 2 || number.length > 15) errs.vehicleNumber = "Vehicle number must be 2-15 characters.";
+  else if (!/^(?=.*\d)[A-Za-z0-9]+(\s*[- ]\s*[A-Za-z0-9]+)*$/.test(number)) {
+    errs.vehicleNumber = "Use letters and digits separated by '-' or spaces, e.g. CAB-1024.";
+  }
+  if (!serviceArea.trim()) errs.serviceArea = "Service area is required.";
+  return errs;
+}
+
+// Server-side field errors (VALIDATION_ERROR details) go under their fields;
+// anything else is shown in the banner.
+function splitServerError(e: unknown, fields: (keyof FieldErrors)[]): { fieldErrors: FieldErrors; banner: string | null } {
+  if (!(e instanceof ApiError)) return { fieldErrors: {}, banner: "Something went wrong. Please try again." };
+  if (e.code === "EMAIL_ALREADY_EXISTS") return { fieldErrors: { email: e.message }, banner: null };
+  if (e.code === "VEHICLE_ALREADY_EXISTS") return { fieldErrors: { vehicleNumber: e.message }, banner: null };
+  const fieldErrors: FieldErrors = {};
+  for (const [field, message] of Object.entries(e.details ?? {})) {
+    if ((fields as string[]).includes(field)) fieldErrors[field as keyof FieldErrors] = message;
+  }
+  return { fieldErrors, banner: Object.keys(fieldErrors).length > 0 ? null : e.message };
+}
+
+const HOME_BY_ROLE: Record<Role, string> = {
+  PASSENGER: "/passenger",
+  DRIVER: "/driver",
+  ADMIN: "/admin/dashboard",
+};
+
 export default function AuthPage() {
+  // useSearchParams needs a Suspense boundary.
+  return (
+    <Suspense fallback={null}>
+      <AuthForm />
+    </Suspense>
+  );
+}
+
+function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
+
+  // Where to go after signing in: the page that sent the user here (only
+  // same-site paths), else their role's dashboard.
+  function destinationFor(role: Role): string {
+    const next = searchParams.get("next");
+    return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/login") ? next : HOME_BY_ROLE[role];
+  }
 
   const [mode, setMode] = useState<Mode>("login");
   const [role, setRole] = useState<Role>("PASSENGER");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -30,33 +104,41 @@ export default function AuthPage() {
   const [vehicleType, setVehicleType] = useState("Car");
   const [serviceArea, setServiceArea] = useState("");
 
+  function switchMode(m: Mode) {
+    setMode(m);
+    setFieldErrors({});
+    setError(null);
+  }
+
   async function submit() {
     setError(null);
+    const errs = mode === "login"
+      ? validateLogin(email, password)
+      : validateRegister(name, email, password);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     setBusy(true);
     try {
       if (mode === "login") {
-        const auth = await accountApi.login({ email, password });
-        login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role });
-        if (auth.role === "ADMIN") {
-          router.push("/admin/dashboard");
-        } else if (auth.role === "DRIVER") {
-          router.push("/driver");
-        } else {
-          router.push("/passenger");
-        }
+        const auth = await accountApi.login({ email: email.trim(), password });
+        login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role, email: email.trim() });
+        router.push(destinationFor(auth.role));
       } else {
-        const auth = await accountApi.register({ name, email, password, role });
-        login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role });
+        const auth = await accountApi.register({ name: name.trim(), email: email.trim(), password, role });
+        login({ token: auth.token, id: auth.id, name: auth.name, role: auth.role, email: email.trim() });
         if (auth.role === "DRIVER") {
           setNeedsDriverProfile({ token: auth.token });
-        } else if (auth.role === "ADMIN") {
-          router.push("/admin/dashboard");
         } else {
-          router.push("/passenger");
+          router.push(destinationFor(auth.role));
         }
       }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
+      const { fieldErrors: serverFieldErrors, banner } = splitServerError(e, ["name", "email", "password"]);
+      setFieldErrors(serverFieldErrors);
+      setError(banner);
     } finally {
       setBusy(false);
     }
@@ -65,15 +147,23 @@ export default function AuthPage() {
   async function submitDriverProfile() {
     if (!needsDriverProfile) return;
     setError(null);
+    const errs = validateDriverProfile(vehicleNumber, serviceArea);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     setBusy(true);
     try {
-      const driver = await driverApi.createProfile(
-        { name, email, vehicleNumber, vehicleType, serviceArea },
+      await driverApi.createProfile(
+        { name: name.trim(), email: email.trim(), vehicleNumber: vehicleNumber.trim(), vehicleType, serviceArea: serviceArea.trim() },
         needsDriverProfile.token
       );
       router.push("/driver");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not create your driver profile.");
+      const { fieldErrors: serverFieldErrors, banner } = splitServerError(e, ["vehicleNumber", "vehicleType", "serviceArea"]);
+      setFieldErrors(serverFieldErrors);
+      setError(banner);
     } finally {
       setBusy(false);
     }
@@ -92,19 +182,21 @@ export default function AuthPage() {
               Your account is ready. Driver Service also needs a driver profile before you can go
               online - vehicle details, and the service area you drive in.
             </p>
-            <Field label="Vehicle number" value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} placeholder="CAB-1024" />
+            <FieldWithError label="Vehicle number" value={vehicleNumber} onChange={(e) => { setVehicleNumber(e.target.value); setFieldErrors(prev => ({ ...prev, vehicleNumber: undefined })); }} placeholder="CAB-1024" error={fieldErrors.vehicleNumber} />
             <SelectField 
               label="Vehicle type" 
               value={vehicleType} 
               onChange={(e) => setVehicleType(e.target.value)}
               options={[
                 { value: "Car", label: "Car" },
+                { value: "Sedan", label: "Sedan" },
+                { value: "Hatchback", label: "Hatchback" },
                 { value: "Bike", label: "Bike" },
                 { value: "Tuk", label: "Tuk" },
                 { value: "Van", label: "Van" },
               ]}
             />
-            <Field label="Service area" value={serviceArea} onChange={(e) => setServiceArea(e.target.value)} placeholder="Malabe" />
+            <FieldWithError label="Service area" value={serviceArea} onChange={(e) => { setServiceArea(e.target.value); setFieldErrors(prev => ({ ...prev, serviceArea: undefined })); }} placeholder="Malabe" error={fieldErrors.serviceArea} />
             <PrimaryButton onClick={submitDriverProfile} disabled={busy}>
               {busy ? "Saving..." : "Create driver profile"}
             </PrimaryButton>
@@ -137,32 +229,46 @@ export default function AuthPage() {
             <div style={{ display: "flex", gap: 2, padding: 3, background: "rgba(31,58,95,.1)", borderRadius: 9, marginBottom: 24 }}>
               <button
                 type="button"
-                onClick={() => setMode("login")}
+                onClick={() => switchMode("login")}
                 style={tabStyle(mode === "login")}
               >
                 Sign in
               </button>
               <button
                 type="button"
-                onClick={() => setMode("register")}
+                onClick={() => switchMode("register")}
                 style={tabStyle(mode === "register")}
               >
                 Create account
               </button>
             </div>
 
-            <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <FieldWithError
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setFieldErrors(prev => ({ ...prev, email: undefined })); }}
+              placeholder="you@example.com"
+              error={fieldErrors.email}
+            />
 
             {mode === "register" && (
-              <Field label="Full name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ada Okonjo" />
+              <FieldWithError
+                label="Full name"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setFieldErrors(prev => ({ ...prev, name: undefined })); }}
+                placeholder="Ada Okonjo"
+                error={fieldErrors.name}
+              />
             )}
 
-            <Field
+            <FieldWithError
               label="Password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
+              onChange={(e) => { setPassword(e.target.value); setFieldErrors(prev => ({ ...prev, password: undefined })); }}
+              placeholder={mode === "register" ? PASSWORD_HINT : "Your password"}
+              error={fieldErrors.password}
             />
 
             {mode === "register" && (
@@ -177,7 +283,7 @@ export default function AuthPage() {
               </div>
             )}
 
-            <PrimaryButton onClick={submit} disabled={busy || !email || !password || (mode === "register" && !name)}>
+            <PrimaryButton onClick={submit} disabled={busy}>
               {busy ? "Please wait..." : mode === "login" ? "Sign in" : `Create ${role.toLowerCase()} account`}
             </PrimaryButton>
 
