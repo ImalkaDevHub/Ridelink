@@ -1,0 +1,15 @@
+# IDE / Editor files
+.idea/
+*.iml
+
+# Node / Next.js build output
+node_modules/
+.next/
+
+# Environment files
+.env.local
+.env.development.local
+.env.production.local
+
+# Runtime logs and PID files
+logs/
