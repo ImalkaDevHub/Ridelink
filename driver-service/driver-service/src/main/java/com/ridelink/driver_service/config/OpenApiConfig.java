@@ -9,11 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 // Powers the Swagger UI page springdoc-openapi exposes for this service.
-// Registers one bearer-JWT scheme and applies it as the default for every
-// endpoint; GET /available and PATCH /{id}/avaiilability override this with
-// @SecurityRequirements on their controller methods, since both are callable
-// without a token (see SecurityConfig for why) so a lock icon there would be
-// misleading.
+// Registers one bearer-JWT scheme and applies it to every endpoint - all
+// /api/drivers/** endpoints require a token.
 @Configuration
 public class OpenApiConfig {
 
