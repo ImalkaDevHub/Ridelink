@@ -159,10 +159,17 @@ public class PaymentService {
 
     // GET /api/payments/{id}/receipt. {id} is a payment id; for the legacy
     // form of this path it is a ride id, so fall back to that when no
-    // payment has this id.
-    public ReceiptResponse getReceipt(String paymentIdOrRideId) {
+    // payment has this id. Only the payer - whoever paid, or for payments
+    // recorded on completion the ride's passenger - or an ADMIN may see it.
+    public ReceiptResponse getReceipt(String paymentIdOrRideId, String callerId, boolean callerIsAdmin) {
         Payment payment = paymentRepository.findById(paymentIdOrRideId)
                 .orElseGet(() -> primaryPaymentForRide(paymentIdOrRideId));
+
+        boolean isPayer = callerId != null
+                && (callerId.equals(payment.getPayerId()) || callerId.equals(payment.getPassengerId()));
+        if (!callerIsAdmin && !isPayer) {
+            throw new NotPayerException("Only the payer can view this receipt.");
+        }
 
         if (!payment.getStatus().isPaid()) {
             throw new PaymentNotFoundException("No completed payment found for: " + paymentIdOrRideId);

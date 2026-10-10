@@ -78,18 +78,16 @@ public class FareController {
     }
 
     @PostMapping("/api/payments")
-    @PreAuthorize("hasAuthority('PASSENGER') or hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('PASSENGER')")
     @ApiResponse(responseCode = "201", description = "Payment succeeded (status PAID)",
             content = @Content(schema = @Schema(implementation = PaymentResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validation failed, or CARD without cardLast4")
     @ApiResponse(responseCode = "402", description = "Card declined - attempt saved as FAILED; retrying is allowed")
-    @ApiResponse(responseCode = "403", description = "Caller is not the ride's passenger")
+    @ApiResponse(responseCode = "403", description = "Caller is not a PASSENGER, or not this ride's passenger")
     @ApiResponse(responseCode = "409", description = "Fare not finalized yet, or ride already paid")
     public ResponseEntity<PaymentResponse> pay(@Valid @RequestBody PaymentRequest request, Authentication authentication) {
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(paymentService.pay(request, authentication.getName(), isAdmin));
+                .body(paymentService.pay(request, authentication.getName(), isAdmin(authentication)));
     }
 
     @GetMapping("/api/payments/{id}")
@@ -120,8 +118,14 @@ public class FareController {
     @GetMapping("/api/payments/{id}/receipt")
     @ApiResponse(responseCode = "200", description = "Receipt with receipt number and fare breakdown",
             content = @Content(schema = @Schema(implementation = ReceiptResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Caller is neither the payer nor an ADMIN")
     @ApiResponse(responseCode = "404", description = "No paid payment for this payment id or ride id")
-    public ResponseEntity<ReceiptResponse> getReceipt(@PathVariable String id) {
-        return ResponseEntity.ok(paymentService.getReceipt(id));
+    public ResponseEntity<ReceiptResponse> getReceipt(@PathVariable String id, Authentication authentication) {
+        return ResponseEntity.ok(paymentService.getReceipt(id, authentication.getName(), isAdmin(authentication)));
+    }
+
+    private static boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
     }
 }
