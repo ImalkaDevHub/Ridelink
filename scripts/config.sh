@@ -46,10 +46,11 @@ fi
 
 # --- Helpers ----------------------------------------------------------------
 
-# http_code <port> -> prints the HTTP status code, or 000 if nothing answered.
+# http_code <port> [path] -> prints the HTTP status code of http://localhost:<port><path>
+# (path defaults to /), or 000 if nothing answered.
 http_code() {
   local code
-  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:$1/" 2>/dev/null)"
+  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://localhost:$1${2:-/}" 2>/dev/null)"
   echo "${code:-000}"
 }
 
