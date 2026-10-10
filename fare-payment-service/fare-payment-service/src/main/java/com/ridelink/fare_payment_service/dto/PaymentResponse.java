@@ -1,81 +1,43 @@
 package com.ridelink.fare_payment_service.dto;
 
+import com.ridelink.fare_payment_service.model.Payment;
+
+import java.math.BigDecimal;
 import java.time.Instant;
 
-public class PaymentResponse {
+// The first seven fields are the original response (ride-service reads
+// id/rideId/finalFare/status); the rest were added later.
+public record PaymentResponse(
+        String id,
+        String rideId,
+        BigDecimal finalFare,
+        String status,
+        String paymentMethod,
+        Instant createdAt,
+        Instant completedAt,
+        String method,
+        String cardLast4,
+        String currency,
+        String passengerId,
+        String payerId,
+        String receiptNumber,
+        String failureReason) {
 
-    private String id;
-    private String rideId;
-    private double finalFare;
-    private String status;
-    private String paymentMethod;
-    private Instant createdAt;
-    private Instant completedAt;
-
-    public PaymentResponse(String id, String rideId, double finalFare, String status, String paymentMethod,
-                            Instant createdAt, Instant completedAt) {
-        this.id = id;
-        this.rideId = rideId;
-        this.finalFare = finalFare;
-        this.status = status;
-        this.paymentMethod = paymentMethod;
-        this.createdAt = createdAt;
-        this.completedAt = completedAt;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getRideId() {
-        return rideId;
-    }
-
-    public void setRideId(String rideId) {
-        this.rideId = rideId;
-    }
-
-    public double getFinalFare() {
-        return finalFare;
-    }
-
-    public void setFinalFare(double finalFare) {
-        this.finalFare = finalFare;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(String paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getCompletedAt() {
-        return completedAt;
-    }
-
-    public void setCompletedAt(Instant completedAt) {
-        this.completedAt = completedAt;
+    public static PaymentResponse from(Payment payment) {
+        return new PaymentResponse(
+                payment.getId(),
+                payment.getRideId(),
+                payment.getFinalFare(),
+                payment.getStatus().name(),
+                payment.getPaymentMethod(),
+                payment.getCreatedAt(),
+                payment.getCompletedAt(),
+                payment.getMethod() == null ? null : payment.getMethod().name(),
+                payment.getCardLast4(),
+                payment.getCurrency(),
+                payment.getPassengerId(),
+                payment.getPayerId(),
+                payment.getReceiptNumber(),
+                payment.getFailureReason());
     }
 }

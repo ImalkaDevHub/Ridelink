@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 
 export default function NavBar({ label }: { label?: string }) {
   const { session, logout, ready } = useAuth();
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // logout() clears the token cookie and sends the user to /login.
   function handleLogout() {
+    setMenuOpen(false);
     logout();
-    router.push("/");
   }
 
   return (
@@ -52,6 +51,7 @@ export default function NavBar({ label }: { label?: string }) {
           {ready && !session && <NavLink href="/login">Sign in</NavLink>}
           {ready && session?.role === "PASSENGER" && <NavLink href="/passenger">Passenger</NavLink>}
           {ready && session?.role === "DRIVER" && <NavLink href="/driver">Driver</NavLink>}
+          {ready && session && <NavLink href="/profile">Profile</NavLink>}
           
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "var(--muted)" }}>
             {label}
@@ -89,6 +89,7 @@ export default function NavBar({ label }: { label?: string }) {
           {ready && !session && <NavLink href="/login">Sign in</NavLink>}
           {ready && session?.role === "PASSENGER" && <NavLink href="/passenger">Passenger</NavLink>}
           {ready && session?.role === "DRIVER" && <NavLink href="/driver">Driver</NavLink>}
+          {ready && session && <NavLink href="/profile">Profile</NavLink>}
           <span style={{ fontSize: 12, color: "var(--muted)" }}>{label}</span>
           {ready && session && (
             <button

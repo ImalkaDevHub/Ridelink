@@ -17,10 +17,11 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
+import { accountApi, driverApi, errorMessage, type AccountStatus } from '@/lib/api';
 
 interface AdminDriver {
   id: string; // The ID from driver-service
-  userId: string; // The ID from account-service
+  userId: string | null; // The driver's account id (null for profiles created before it was recorded)
   name: string;
   vehicleNumber: string;
   vehicleType: string;
@@ -36,6 +37,7 @@ const AdminDashboard = () => {
   const [drivers, setDrivers] = useState<AdminDriver[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Authentication & Role Protection
   useEffect(() => {
@@ -47,78 +49,62 @@ const AdminDashboard = () => {
     }
   }, [session, ready, router]);
 
-  const fetchDrivers = async () => {
+  // Driver profiles come from Driver Service; the ACTIVE/SUSPENDED status
+  // lives on the driver's account in Account Service, matched by accountId.
+  const fetchDrivers = React.useCallback(async () => {
     if (!session || session.role !== "ADMIN") return;
     try {
-      const res = await fetch('http://localhost:8082/api/drivers', {
-        headers: { Authorization: `Bearer ${session.token}` }
-      });
-      if (res.ok) {
-        const rawData = await res.json();
-        const mappedData = rawData.map((d: any) => ({
-          id: d.id,
-          userId: d.accountId || d.userId || d.id, 
-          name: d.name,
-          vehicleNumber: d.vehicleNumber || "N/A", 
-          vehicleType: d.vehicleType || "N/A",
-          status: d.status || "ACTIVE",
-          available: !!d.available,
-          currentRideId: d.currentRideId || null
-        }));
-        setDrivers(mappedData);
-      } else {
-        throw new Error(`Failed to fetch drivers: ${res.status}`);
-      }
+      const [driverList, accounts] = await Promise.all([driverApi.all(), accountApi.list(0, 100)]);
+      const statusByAccount = new Map<string, AccountStatus>(accounts.content.map(a => [a.id, a.status]));
+      setDrivers(driverList.map(d => ({
+        id: d.id,
+        userId: d.accountId ?? null,
+        name: d.name,
+        vehicleNumber: d.vehicleNumber || "N/A",
+        vehicleType: d.vehicleType || "N/A",
+        status: (d.accountId && statusByAccount.get(d.accountId)) || "ACTIVE",
+        available: !!d.available,
+        currentRideId: null,
+      })));
     } catch (err) {
       console.error('Error fetching drivers from backend:', err);
     }
-  };
+  }, [session]);
 
   // Fetch Drivers initially and poll every 10 seconds
   useEffect(() => {
     if (!session || session.role !== "ADMIN") return;
 
-    fetchDrivers(); // Initial fetch
+    Promise.resolve().then(() => fetchDrivers()); // Initial fetch
     
     const interval = setInterval(() => {
       fetchDrivers();
     }, 10000); // 10 seconds polling
 
     return () => clearInterval(interval);
-  }, [session]);
+  }, [session, fetchDrivers]);
 
   const handleToggleStatus = async (driver: AdminDriver) => {
-    if (!session) return;
-    const newStatus = driver.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    if (!session || !driver.userId) return;
+    const accountId = driver.userId;
+    const newStatus: AccountStatus = driver.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    setActionError(null);
 
     // Optimistic Update
-    setDrivers(prev => prev.map(d => (d.userId === driver.userId ? { ...d, status: newStatus } : d)));
+    setDrivers(prev => prev.map(d => (d.userId === accountId ? { ...d, status: newStatus } : d)));
 
     try {
-      // Pass status as a query parameter because AccountController expects @RequestParam
-      const res = await fetch(`http://localhost:8081/api/accounts/${driver.userId}/status?status=${newStatus}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.token}`
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to update status");
-      }
+      await accountApi.setStatus(accountId, newStatus);
     } catch (err) {
-      console.error('Status update failed:', err);
       // Revert optimistic update
-      setDrivers(prev => prev.map(d => (d.userId === driver.userId ? { ...d, status: driver.status } : d)));
-      alert('Action failed! Make sure you are authenticated as ADMIN.');
+      setDrivers(prev => prev.map(d => (d.userId === accountId ? { ...d, status: driver.status } : d)));
+      setActionError(errorMessage(err, "We couldn't change that driver's status. Please try again."));
     }
   };
 
+  // logout() clears the token cookie and redirects to /login.
   const handleLogout = () => {
     logout();
-    router.push('/login');
   };
 
   if (!ready || !session || session.role !== "ADMIN") {
@@ -197,6 +183,7 @@ const AdminDashboard = () => {
             onClick={handleLogout}
             className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 transition"
             title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut size={17} />
           </button>
@@ -317,6 +304,7 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-3">
               <select
                 value={statusFilter}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onChange={(e) => setStatusFilter(e.target.value as any)}
                 className="text-xs font-semibold px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
@@ -326,6 +314,12 @@ const AdminDashboard = () => {
               </select>
             </div>
           </div>
+
+          {actionError && (
+            <div className="mx-6 mb-4 px-4 py-3 text-sm font-medium rounded-xl bg-red-50 text-red-600 border border-red-200/60">
+              {actionError}
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse whitespace-nowrap">
@@ -342,7 +336,7 @@ const AdminDashboard = () => {
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredDrivers.length > 0 ? (
                   filteredDrivers.map((driver) => (
-                    <tr key={driver.id || driver.userId} className="hover:bg-slate-50/60 transition group">
+                    <tr key={driver.id} className="hover:bg-slate-50/60 transition group">
                       <td className="py-4 px-6 font-bold text-slate-900">
                         {driver.name}
                       </td>
@@ -388,7 +382,9 @@ const AdminDashboard = () => {
                       <td className="py-4 px-6 text-right">
                         <button
                           onClick={() => handleToggleStatus(driver)}
-                          className={`px-4 py-1.5 text-xs font-bold rounded-xl transition duration-200 shadow-sm ${
+                          disabled={!driver.userId}
+                          title={driver.userId ? undefined : "This driver profile isn't linked to an account"}
+                          className={`px-4 py-1.5 text-xs font-bold rounded-xl transition duration-200 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
                             driver.status === 'ACTIVE'
                               ? 'border border-red-200 text-red-600 hover:bg-red-50'
                               : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20'

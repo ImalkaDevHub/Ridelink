@@ -7,9 +7,15 @@
 target/
 *.class
 
+# Node / Next.js build output
+node_modules/
+.next/
+*.tsbuildinfo
+
 # Secrets / local overrides - none of these should ever be committed
 .env
 .env.*
+!.env.example
 application-local.properties
 application-*-local.properties
 

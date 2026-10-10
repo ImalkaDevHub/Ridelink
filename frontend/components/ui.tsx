@@ -37,6 +37,48 @@ export function Field({
   );
 }
 
+export function FieldWithError({
+  label,
+  error,
+  ...props
+}: { label: string; error?: string | null } & InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label>
+        <span
+          style={{
+            display: "block",
+            fontFamily: "var(--font-heading)",
+            fontSize: 11.5,
+            fontWeight: 600,
+            color: "var(--muted)",
+            marginBottom: 5,
+          }}
+        >
+          {label}
+        </span>
+        <input
+          {...props}
+          style={{
+            width: "100%",
+            padding: "11px 12px",
+            border: `1px solid ${error ? "#ef4444" : "rgba(31,58,95,.3)"}`,
+            borderRadius: 8,
+            background: "#fff",
+            color: "#14161a",
+            fontSize: 14,
+            boxSizing: "border-box",
+            ...props.style,
+          }}
+        />
+      </label>
+      {error && (
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#ef4444" }}>{error}</p>
+      )}
+    </div>
+  );
+}
+
 export function SelectField({
   label,
   options,
@@ -177,7 +219,9 @@ export function InfoBanner({ children }: { children: ReactNode }) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  ASSIGNED: "#ffb020",
+  REQUESTED: "#60a5fa",
+  ASSIGNED: "#f59e0b",
+  ACCEPTED: "#f59e0b",
   IN_PROGRESS: "#ffb020",
   COMPLETED: "#3ddc84",
   CANCELLED: "#6b7280",
@@ -203,5 +247,65 @@ export function StatusBadge({ status }: { status: string }) {
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: color }} />
       {status}
     </span>
+  );
+}
+
+const STEPPER_STATES = ["REQUESTED", "ASSIGNED", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
+
+export function RideStepper({ status }: { status: string }) {
+  const isCancelled = status === "CANCELLED";
+  const activeIndex = STEPPER_STATES.indexOf(status);
+
+  return (
+    <div style={{ margin: "16px 0" }}>
+      {isCancelled ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 28, height: 28, borderRadius: "50%", background: "#6b7280", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13 }}>✕</span>
+          <span style={{ fontFamily: "var(--font-heading)", fontSize: 13, fontWeight: 600, color: "#6b7280" }}>Cancelled</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 0, overflowX: "auto", paddingBottom: 4 }}>
+          {STEPPER_STATES.map((step, i) => {
+            const done = i < activeIndex;
+            const current = i === activeIndex;
+            const accentColor = step === "COMPLETED" ? "#3ddc84" : "var(--accent)";
+            const color = done || current ? accentColor : "var(--line)";
+            return (
+              <div key={step} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: "50%",
+                    background: done || current ? color : "transparent",
+                    border: `2px solid ${color}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700,
+                    color: done || current ? "#111" : color,
+                    transition: "all 0.3s",
+                  }}>
+                    {done ? "✓" : i + 1}
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontFamily: "var(--font-heading)",
+                    fontWeight: current ? 700 : 400,
+                    color: done || current ? "var(--text)" : "var(--muted)",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {step === "IN_PROGRESS" ? "In Progress" : step.charAt(0) + step.slice(1).toLowerCase()}
+                  </span>
+                </div>
+                {i < STEPPER_STATES.length - 1 && (
+                  <div style={{
+                    width: 24, height: 2,
+                    background: i < activeIndex ? accentColor : "var(--line)",
+                    margin: "0 2px", marginBottom: 18,
+                    transition: "background 0.3s", flexShrink: 0,
+                  }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
