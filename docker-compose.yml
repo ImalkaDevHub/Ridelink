@@ -1,13 +1,132 @@
-version: '3.8'
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: ridelink-mongodb
+  mongo:
+    image: mongo:7
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
-    restart: always
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  account-service:
+    build:
+      context: ./account-service/account-service
+    ports:
+      - "8081:8081"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ridelink_account
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file; see .env.example}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@ridelink.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in the root .env file; see .env.example}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8081; printf \"GET /actuator/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; IFS= read -r response <&3; [[ \"$$response\" == *\" 200 \"* ]]'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  driver-service:
+    build:
+      context: ./driver-service/driver-service
+    ports:
+      - "8082:8082"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ridelink_driver
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file; see .env.example}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8082; printf \"GET /actuator/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; IFS= read -r response <&3; [[ \"$$response\" == *\" 200 \"* ]]'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  fare-payment-service:
+    build:
+      context: ./fare-payment-service/fare-payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ridelink_fare_payment
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file; see .env.example}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8084; printf \"GET /actuator/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; IFS= read -r response <&3; [[ \"$$response\" == *\" 200 \"* ]]'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  ride-service:
+    build:
+      context: ./ride-service/ride-service
+    ports:
+      - "8083:8083"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/ridelink_ride
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file; see .env.example}
+      DRIVER_SERVICE_BASE_URL: http://driver-service:8082
+      FARE_SERVICE_BASE_URL: http://fare-payment-service:8084
+    depends_on:
+      mongo:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
+      fare-payment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8083; printf \"GET /actuator/health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; IFS= read -r response <&3; [[ \"$$response\" == *\" 200 \"* ]]'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_ACCOUNT_API_URL: http://localhost:8081
+        NEXT_PUBLIC_DRIVER_API_URL: http://localhost:8082
+        NEXT_PUBLIC_RIDE_API_URL: http://localhost:8083
+        NEXT_PUBLIC_FARE_API_URL: http://localhost:8084
+    ports:
+      - "3000:3000"
+    depends_on:
+      account-service:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
+      ride-service:
+        condition: service_healthy
+      fare-payment-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
 
 volumes:
-  mongodb_data:
+  mongo_data:
