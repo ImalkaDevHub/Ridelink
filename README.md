@@ -228,10 +228,38 @@ The full stack is also deployed and reachable online — Render for the four Spr
  
 | Method | Endpoint | Description |
 |--------|----------|--------------|
-| `POST` | `/api/fares/estimate` | Estimate a fare for a pickup/destination |
-| `POST` | `/api/payments/finalize` | Interservice: calculate final fare, record a simulated payment |
-| `GET` | `/api/payments/{rideId}/status` | Check a payment's status |
-| `GET` | `/api/payments/{rideId}/receipt` | Retrieve a completed payment's receipt |
+| `POST` | `/api/fares/estimate` | Estimate a fare for a pickup/destination (public) |
+| `POST` | `/api/fares/final` | Store a ride's final fare with its breakdown — idempotent per `rideId` (DRIVER/ADMIN) |
+| `POST` | `/api/payments` | Pay a ride's final fare: `{rideId, method: CARD\|CASH, cardLast4?}` (PASSENGER/ADMIN) |
+| `GET` | `/api/payments/{id}` | One payment |
+| `GET` | `/api/payments/ride/{rideId}` | Every payment attempt for a ride |
+| `GET` | `/api/payments/{id}/receipt` | Receipt (receipt number, breakdown, method, status, timestamp). Also accepts a `rideId` |
+| `POST` | `/api/payments/finalize` | Interservice (legacy): final fare + a simulated, already-collected payment (DRIVER/ADMIN) |
+| `GET` | `/api/payments/{rideId}/status` | The ride's paid payment, or its latest attempt |
+
+#### Fare rule
+
+All amounts are in **LKR**, calculated with `BigDecimal` and stored as MongoDB `Decimal128`:
+
+```
+fare = max(minimumFare, baseFare + perKm × distanceKm + perMin × durationMin) × multiplier[vehicleType]
+```
+
+rounded to 2 decimal places (half-up). Defaults, all configurable in `fare-payment-service/.../application.properties` (`fare.*`):
+
+| Setting | Default | | Vehicle type | Multiplier |
+|---|---:|---|---|---:|
+| `fare.base-fare` | 300 | | `SEDAN` | 1.0 |
+| `fare.per-km` | 120 | | `HATCHBACK` | 0.9 |
+| `fare.per-min` | 10 | | `VAN` | 1.5 |
+| `fare.minimum-fare` | 500 | | `TUK` | 0.8 |
+| | | | `CAR` / `BIKE` *(kept for existing clients)* | 1.0 / 0.6 |
+
+Example: a 5 km, 12 min sedan ride is `max(500, 300 + 600 + 120) × 1.0 = 1020.00 LKR`; the same trip by van is `1530.00 LKR`.
+
+For an **estimate**, the distance comes from `distanceKm` if given, else from pickup/destination coordinates (Haversine, straight-line), else from a small built-in table of place names (SLIIT, Malabe Junction, Colombo Fort, Kaduwela, Kandy, …). Without `durationMin`, the duration is estimated at `fare.average-speed-kmh` (25 km/h).
+
+**Payments** always charge the stored final fare — the client never sends an amount. Paying before the fare is finalized returns `409 FARE_NOT_FINALIZED`; a card ending in `0000` is a simulated decline (`402 PAYMENT_FAILED`, the attempt is saved as `FAILED` and can be retried); a second payment for a paid ride returns `409 PAYMENT_ALREADY_EXISTS`.
  
 ---
  

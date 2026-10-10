@@ -3,10 +3,13 @@ package com.ridelink.fare_payment_service.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 // A quote generated before (or without) a ride existing - rideId is
 // nullable because an estimate can be requested pre-booking.
+// vehicleType, currency and distanceSource were added later and are null
+// on older documents; their doubles convert to BigDecimal on read.
 @Document(collection = "fare_estimates")
 public class FareEstimate {
 
@@ -18,9 +21,13 @@ public class FareEstimate {
     private String pickupLocation;
     private String destinationLocation;
 
-    private double distanceKm;
-    private double durationMin;
-    private double estimatedFare;
+    private BigDecimal distanceKm;
+    private BigDecimal durationMin;
+    private BigDecimal estimatedFare;
+
+    private String vehicleType;
+    private String currency;
+    private String distanceSource;
 
     private Instant createdAt = Instant.now();
 
@@ -56,28 +63,52 @@ public class FareEstimate {
         this.destinationLocation = destinationLocation;
     }
 
-    public double getDistanceKm() {
+    public BigDecimal getDistanceKm() {
         return distanceKm;
     }
 
-    public void setDistanceKm(double distanceKm) {
+    public void setDistanceKm(BigDecimal distanceKm) {
         this.distanceKm = distanceKm;
     }
 
-    public double getDurationMin() {
+    public BigDecimal getDurationMin() {
         return durationMin;
     }
 
-    public void setDurationMin(double durationMin) {
+    public void setDurationMin(BigDecimal durationMin) {
         this.durationMin = durationMin;
     }
 
-    public double getEstimatedFare() {
+    public BigDecimal getEstimatedFare() {
         return estimatedFare;
     }
 
-    public void setEstimatedFare(double estimatedFare) {
+    public void setEstimatedFare(BigDecimal estimatedFare) {
         this.estimatedFare = estimatedFare;
+    }
+
+    public String getVehicleType() {
+        return vehicleType;
+    }
+
+    public void setVehicleType(String vehicleType) {
+        this.vehicleType = vehicleType;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public String getDistanceSource() {
+        return distanceSource;
+    }
+
+    public void setDistanceSource(String distanceSource) {
+        this.distanceSource = distanceSource;
     }
 
     public Instant getCreatedAt() {
