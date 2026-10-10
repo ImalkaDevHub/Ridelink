@@ -2,17 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 jobs:
   build-and-test:
     name: Build & test (${{ matrix.service }})
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
     strategy:
-      # Let every service run to completion even if one fails, so a single
-      # red service doesn't hide the results of the other three.
       fail-fast: false
       matrix:
         service:
@@ -21,8 +24,6 @@ jobs:
           - ride-service
           - fare-payment-service
 
-    # Each service's actual Maven project lives one directory deeper than
-    # its top-level folder name, e.g. account-service/account-service.
     defaults:
       run:
         working-directory: ${{ matrix.service }}/${{ matrix.service }}
@@ -38,10 +39,36 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # clean verify runs the full build lifecycle including the unit test
-      # phase, so account-service's and fare-payment-service's JUnit/Mockito
-      # tests execute here too. A non-zero exit from Maven (compile failure
-      # or any failing test) fails this step - and therefore the job -
-      # without any extra handling needed.
       - name: Build and test
-        run: mvn -B clean verify
+        run: ./mvnw -B verify
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-${{ matrix.service }}
+          path: ${{ matrix.service }}/${{ matrix.service }}/target/surefire-reports/
+
+  frontend-build-and-test:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
