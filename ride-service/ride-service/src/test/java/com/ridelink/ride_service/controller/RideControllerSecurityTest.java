@@ -170,7 +170,7 @@ class RideControllerSecurityTest {
 
     @Test
     void healthEndpointIsNotBehindAuthentication() throws Exception {
-        // Actuator isn't on the classpath yet, so 404 - the point is it's not 401.
+        // Actuator endpoints aren't part of this web slice, so 404 - the point is it's not 401.
         mockMvc.perform(get("/actuator/health")).andExpect(status().isNotFound());
     }
 }
